@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { data: shop } = await supabase
     .from("shops").select("name, address").eq("slug", slug).single();
 
-  if (!shop) return { title: "Barbería no encontrada" };
+  if (!shop) return { title: "Salón de belleza no encontrada" };
   return {
     title: shop.name,
     description: `Reserva tu cita en ${shop.name}${shop.address ? ` · ${shop.address}` : ""}`,

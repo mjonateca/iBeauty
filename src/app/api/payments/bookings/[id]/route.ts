@@ -46,7 +46,7 @@ export async function POST(
 
   const bookingShop = Array.isArray(booking.shops) ? booking.shops[0] : booking.shops;
   if (!bookingShop?.payments_enabled) {
-    return NextResponse.json({ error: "Esta barbería todavía no tiene pagos online activos." }, { status: 409 });
+    return NextResponse.json({ error: "Esta salón de belleza todavía no tiene pagos online activos." }, { status: 409 });
   }
 
   if (booking.payment_status === "paid") {

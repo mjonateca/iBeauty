@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   const email = cleanEmail(data.email);
   const fullName =
     data.accountType === "barbershop"
-      ? data.businessName?.trim() || "Barbería"
+      ? data.businessName?.trim() || "Salón de belleza"
       : `${data.firstName.trim()} ${data.lastName?.trim() || ""}`.trim();
 
   const admin = await createAdminClient();

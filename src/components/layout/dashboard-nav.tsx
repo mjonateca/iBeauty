@@ -17,7 +17,7 @@ const shopNavItems: NavItem[] = [
   { tab: "summary", label: "Resumen", icon: LayoutDashboard },
   { tab: "bookings", label: "Reservas", icon: Calendar },
   { tab: "services", label: "Servicios", icon: Scissors },
-  { tab: "barbers", label: "Barberos", icon: UserRound },
+  { tab: "barbers", label: "Estilistas", icon: UserRound },
   { tab: "clients", label: "Clientes", icon: Users },
   { tab: "schedule", label: "Horarios", icon: Clock },
   { tab: "email", label: "Email", icon: Mail },
@@ -46,7 +46,7 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const navItems = role === "client" ? clientNavItems : role === "barber" ? barberNavItems : shopNavItems;
+  const navItems = role === "client" ? clientNavItems : role === "beauty" ? barberNavItems : shopNavItems;
   const activeTab = searchParams.get("tab") || "summary";
 
   async function handleLogout() {
@@ -62,9 +62,9 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
         <div className="border-b p-6">
           <Link href={tabHref("summary")} className="flex items-center gap-2">
             <div className="rounded-xl bg-primary p-2">
-              <Scissors className="h-5 w-5 text-white" />
+              <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold">iBarber</span>
+            <span className="text-lg font-bold">iBeauty</span>
           </Link>
         </div>
 

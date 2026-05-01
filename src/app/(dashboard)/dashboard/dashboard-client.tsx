@@ -348,10 +348,10 @@ export default function DashboardClient({
       body: JSON.stringify({ shop_id: shopState.id, display_name: form.get("display_name"), specialty: form.get("specialty"), bio: form.get("bio"), service_ids: serviceIds }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el barbero", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el estilista", description: payload.error }); return; }
     setBarbers((prev) => [...prev, { ...payload, barber_services: serviceIds.map((id) => ({ service_id: id })) }]);
     event.currentTarget.reset();
-    toast({ title: "Barbero creado" });
+    toast({ title: "Estilista creado" });
   }
 
   async function toggleBarber(barber: BarberWithServices) {
@@ -542,7 +542,7 @@ export default function DashboardClient({
 
           <div className="grid gap-4 lg:grid-cols-2">
             <BarChart title="Servicios más solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavía." />
-            <BarChart title="Barberos con más reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavía." />
+            <BarChart title="Estilistas con más reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavía." />
             <BarChart title="Franjas con más demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
             <BarChart title="Días con más demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
           </div>
@@ -671,7 +671,7 @@ export default function DashboardClient({
       {currentTab === "barbers" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <Card className="shadow-none">
-            <CardHeader><CardTitle>Barberos ({barbers.length})</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Estilistas ({barbers.length})</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {barbers.map((barber) => {
                 const barberStats = analytics.topBarbers.find((b) => b.name === barber.display_name);
@@ -890,7 +890,7 @@ export default function DashboardClient({
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle>Información de la barbería</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Información de la salón de belleza</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={saveShopInfo} className="space-y-4">
                 <div className="space-y-1">
@@ -918,7 +918,7 @@ export default function DashboardClient({
           <Card className="shadow-none">
             <CardHeader><CardTitle>Detalles de la cuenta</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <InfoRow label="URL pública" value={`ibarber.app/${shopState.slug}`} />
+              <InfoRow label="URL pública" value={`ibeauty.app/${shopState.slug}`} />
               <InfoRow label="Ciudad" value={shopState.city ? `${shopState.city}, ${shopState.country_name}` : "No especificada"} />
               <InfoRow label="Pagos online" value={shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"} />
             </CardContent>
@@ -1022,7 +1022,7 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (e: FormEvent<HTMLFormEleme
 function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmit: (e: FormEvent<HTMLFormElement>) => void }) {
   return (
     <Card className="shadow-none">
-      <CardHeader><CardTitle className="text-base">Nuevo barbero</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">Nuevo estilista</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
           <Field name="display_name" label="Nombre público" required placeholder="Ej: Miguel" />
@@ -1044,7 +1044,7 @@ function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmi
               </div>
             </div>
           )}
-          <Button type="submit" className="w-full">Crear barbero</Button>
+          <Button type="submit" className="w-full">Crear estilista</Button>
         </form>
       </CardContent>
     </Card>

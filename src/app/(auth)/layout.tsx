@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="bg-primary rounded-xl p-2">
             <Scissors className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-bold">iBarber</span>
+          <span className="text-xl font-bold">iBeauty</span>
         </Link>
       </header>
 

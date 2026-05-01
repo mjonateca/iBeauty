@@ -20,15 +20,15 @@ export interface OnboardingData {
   description: string;
   // Paso 2
   services: Array<{ name: string; duration_min: number; price: number }>;
-  // Paso 3 — barbero principal (el dueño)
+  // Paso 3 — estilista principal (el dueño)
   barberName: string;
   barberBio: string;
 }
 
 const STEPS = [
-  { label: "Tu barbería", description: "Información básica" },
+  { label: "Tu salón de belleza", description: "Información básica" },
   { label: "Servicios",   description: "Qué ofreces" },
-  { label: "Tu perfil",  description: "Perfil de barbero" },
+  { label: "Tu perfil",  description: "Perfil de estilista" },
 ];
 
 export default function OnboardingWizard({ userId }: { userId: string }) {
@@ -67,7 +67,7 @@ export default function OnboardingWizard({ userId }: { userId: string }) {
             <Scissors className="h-5 w-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-sm">iBarber</p>
+            <p className="font-semibold text-sm">iBeauty</p>
             <p className="text-xs text-muted-foreground">Configuración inicial</p>
           </div>
         </div>

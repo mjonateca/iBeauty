@@ -114,7 +114,7 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
             <Store className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Tu barbería</CardTitle>
+            <CardTitle>Tu salón de belleza</CardTitle>
             <CardDescription>Información básica de tu negocio</CardDescription>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="shopName">Nombre de la barbería *</Label>
+            <Label htmlFor="shopName">Nombre de la salón de belleza *</Label>
             <Input
               id="shopName"
               placeholder="Ej: Barber King Santiago"
@@ -141,7 +141,7 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
             </Label>
             <div className="flex items-center gap-0">
               <span className="h-11 px-3 flex items-center text-sm text-muted-foreground bg-muted rounded-l-xl border border-r-0 border-input whitespace-nowrap">
-                ibarber.do/
+                ibeauty.do/
               </span>
               <Input
                 id="slug"

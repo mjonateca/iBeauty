@@ -63,22 +63,22 @@ export async function POST(request: Request) {
   ]);
 
   if (!shop?.is_active) {
-    return NextResponse.json({ error: "Barbería no disponible" }, { status: 404 });
+    return NextResponse.json({ error: "Salón de belleza no disponible" }, { status: 404 });
   }
 
   if (!isSubscriptionAccessible(subscription?.status, subscription?.current_period_end)) {
     return NextResponse.json(
-      { error: "La barbería tiene la suscripción vencida y no puede recibir nuevas reservas." },
+      { error: "La salón de belleza tiene la suscripción vencida y no puede recibir nuevas reservas." },
       { status: 409 }
     );
   }
 
   if (!barber?.is_active || barber.shop_id !== parsed.data.shop_id) {
-    return NextResponse.json({ error: "Barbero no disponible en esta barbería" }, { status: 409 });
+    return NextResponse.json({ error: "Estilista no disponible en esta salón de belleza" }, { status: 409 });
   }
 
   if (!service?.is_active || service.is_visible === false || service.shop_id !== parsed.data.shop_id) {
-    return NextResponse.json({ error: "Servicio no disponible en esta barbería" }, { status: 409 });
+    return NextResponse.json({ error: "Servicio no disponible en esta salón de belleza" }, { status: 409 });
   }
 
   const { data: assignedServices } = await admin
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
   const hasExplicitAssignments = Boolean(assignedServices?.length);
   const compatible = !hasExplicitAssignments || assignedServices?.some((item) => item.service_id === parsed.data.service_id);
   if (!compatible) {
-    return NextResponse.json({ error: "El barbero seleccionado no ofrece ese servicio" }, { status: 409 });
+    return NextResponse.json({ error: "El estilista seleccionado no ofrece ese servicio" }, { status: 409 });
   }
 
   if (timeToMinutes(parsed.data.end_time) <= timeToMinutes(parsed.data.start_time)) {
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   const openingHours = (shop.opening_hours || {}) as OpeningHoursValue;
   const daySchedule = openingHours[weekdayKey(parsed.data.date)];
   if (daySchedule?.closed) {
-    return NextResponse.json({ error: "La barbería está cerrada ese día" }, { status: 409 });
+    return NextResponse.json({ error: "La salón de belleza está cerrada ese día" }, { status: 409 });
   }
 
   if (
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     (timeToMinutes(parsed.data.start_time.slice(0, 5)) < timeToMinutes(daySchedule.open) ||
       timeToMinutes(parsed.data.end_time.slice(0, 5)) > timeToMinutes(daySchedule.close))
   ) {
-    return NextResponse.json({ error: "La hora elegida está fuera del horario de la barbería" }, { status: 409 });
+    return NextResponse.json({ error: "La hora elegida está fuera del horario de la salón de belleza" }, { status: 409 });
   }
 
   const { data: conflict } = await admin

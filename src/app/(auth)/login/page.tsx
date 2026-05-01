@@ -74,7 +74,7 @@ export default function LoginPage() {
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Bienvenido</CardTitle>
-        <CardDescription>Accede a tu cuenta de iBarber</CardDescription>
+        <CardDescription>Accede a tu cuenta de iBeauty</CardDescription>
       </CardHeader>
 
       <CardContent>

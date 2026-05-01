@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { IS_DEMO } from "@/lib/demo-data";
 import OnboardingWizard from "./onboarding-wizard";
 
-export const metadata = { title: "Configura tu barbería" };
+export const metadata = { title: "Configura tu salón de belleza" };
 
 export default async function OnboardingPage() {
   if (IS_DEMO) {

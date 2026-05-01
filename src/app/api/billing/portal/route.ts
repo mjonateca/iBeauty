@@ -19,7 +19,7 @@ export async function POST() {
     .maybeSingle();
 
   if (!subscription?.stripe_customer_id) {
-    return NextResponse.json({ error: "Esta barbería todavía no tiene cliente de billing." }, { status: 400 });
+    return NextResponse.json({ error: "Esta salón de belleza todavía no tiene cliente de billing." }, { status: 400 });
   }
 
   const stripe = getStripe();

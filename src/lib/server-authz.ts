@@ -61,7 +61,7 @@ export async function requireOwnedActiveShop(shopId?: string | null) {
       ...context,
       subscription,
       response: NextResponse.json(
-        { error: "Tu suscripción no está activa. Actualiza tu plan para seguir gestionando la barbería." },
+        { error: "Tu suscripción no está activa. Actualiza tu plan para seguir gestionando la salón de belleza." },
         { status: 402 }
       ),
     };

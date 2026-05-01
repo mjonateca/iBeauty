@@ -136,7 +136,7 @@ export default function RegisterPage() {
     <Card className="w-full max-w-xl">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Crea tu cuenta</CardTitle>
-        <CardDescription>Elige cómo usarás iBarber.</CardDescription>
+        <CardDescription>Elige cómo usarás iBeauty.</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -149,8 +149,8 @@ export default function RegisterPage() {
               {...register("accountType")}
             >
               <option value="client">Cliente</option>
-              <option value="barber">Barbero</option>
-              <option value="barbershop">Barbería</option>
+              <option value="barber">Estilista</option>
+              <option value="barbershop">Salón de belleza</option>
             </select>
           </div>
 
@@ -171,8 +171,8 @@ export default function RegisterPage() {
                 <Input id="specialty" placeholder="Fade, barba, diseño..." {...register("specialty")} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="shopSlug">Barbería donde trabajas</Label>
-                <Input id="shopSlug" placeholder="slug de la barbería, opcional" {...register("shopSlug")} />
+                <Label htmlFor="shopSlug">Salón de belleza donde trabajas</Label>
+                <Input id="shopSlug" placeholder="slug de la salón de belleza, opcional" {...register("shopSlug")} />
               </div>
             </div>
           )}
@@ -263,7 +263,7 @@ export default function RegisterPage() {
                 <textarea
                   id="description"
                   className="flex min-h-[84px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
-                  placeholder="Especialidad, ambiente, zona o ventajas de tu barbería."
+                  placeholder="Especialidad, ambiente, zona o ventajas de tu salón de belleza."
                   {...register("description")}
                 />
               </div>
@@ -294,9 +294,9 @@ export default function RegisterPage() {
                 Creando cuenta...
               </>
             ) : accountType === "barbershop" ? (
-              "Registrar barbería"
+              "Registrar salón de belleza"
             ) : accountType === "barber" ? (
-              "Crear cuenta de barbero"
+              "Crear cuenta de estilista"
             ) : (
               "Crear cuenta"
             )}

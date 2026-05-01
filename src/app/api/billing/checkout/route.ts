@@ -20,7 +20,7 @@ export async function POST() {
     .single();
 
   if (shopQuery.error || !shopQuery.data) {
-    return NextResponse.json({ error: "Barbería no encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Salón de belleza no encontrada" }, { status: 404 });
   }
 
   const shop = shopQuery.data;
@@ -57,7 +57,7 @@ export async function POST() {
               unit_amount: toStripeAmount(Number(settings?.monthly_price || subscription.monthly_price || 20), settings?.currency || subscription.currency || "USD"),
               recurring: { interval: "month" },
               product_data: {
-                name: "iBarber Pro",
+                name: "iBeauty Pro",
                 description: `Suscripción mensual para ${shop.name}`,
               },
             },

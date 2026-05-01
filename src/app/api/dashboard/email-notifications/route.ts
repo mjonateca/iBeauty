@@ -54,11 +54,11 @@ function buildEmailHtml({
 }) {
   const formattedDate = format(new Date(date + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es });
   const formattedTime = startTime.slice(0, 5);
-  const subject = LABELS[type] || "Notificación de iBarber";
+  const subject = LABELS[type] || "Notificación de iBeauty";
   const isReminder = type === "reminder";
   const isCancellation = type === "cancellation";
 
-  const color = isCancellation ? "#ef4444" : "#0d9488";
+  const color = isCancellation ? "#ef4444" : "#de2163";
   const emoji = isCancellation ? "❌" : isReminder ? "⏰" : "✅";
 
   return `<!DOCTYPE html>
@@ -80,18 +80,18 @@ function buildEmailHtml({
             : `<p style="margin:0 0 20px;color:#374151;font-size:15px">${isReminder ? "Te recordamos que tienes una cita próximamente:" : "Tu reserva ha sido confirmada:"}</p>`
           }
           <table width="100%" style="background:#f9fafb;border-radius:8px;padding:16px" cellpadding="0" cellspacing="0">
-            <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Barbero</span><br><strong style="color:#111827;font-size:15px">${barberName}</strong></td></tr>
+            <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Estilista</span><br><strong style="color:#111827;font-size:15px">${barberName}</strong></td></tr>
             <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Servicio</span><br><strong style="color:#111827;font-size:15px">${serviceName}</strong></td></tr>
             <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Fecha</span><br><strong style="color:#111827;font-size:15px">${formattedDate}</strong></td></tr>
             <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Hora</span><br><strong style="color:#111827;font-size:15px">${formattedTime}</strong></td></tr>
           </table>
           ${!isCancellation ? `
           <div style="text-align:center;margin-top:24px">
-            <a href="https://ibarber.app/${shopSlug}" style="background:${color};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Ver mi reserva</a>
+            <a href="https://ibeauty.app/${shopSlug}" style="background:${color};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Ver mi reserva</a>
           </div>` : ""}
         </td></tr>
         <tr><td style="padding:16px 32px;border-top:1px solid #f3f4f6;text-align:center">
-          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="https://ibarber.app" style="color:#0d9488;text-decoration:none">iBarber</a></p>
+          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="https://ibeauty.app" style="color:#de2163;text-decoration:none">iBeauty</a></p>
         </td></tr>
       </table>
     </td></tr>
@@ -139,9 +139,9 @@ export async function POST(request: Request) {
   if (recipientEmail && process.env.RESEND_API_KEY) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const barberName = (booking.barbers as { display_name: string } | null)?.display_name || "Tu barbero";
+      const barberName = (booking.barbers as { display_name: string } | null)?.display_name || "Tu estilista";
       const serviceName = (booking.services as { name: string } | null)?.name || "Servicio";
-      const subject = LABELS[parsed.data.type] || "Notificación de iBarber";
+      const subject = LABELS[parsed.data.type] || "Notificación de iBeauty";
 
       const html = buildEmailHtml({
         type: parsed.data.type,

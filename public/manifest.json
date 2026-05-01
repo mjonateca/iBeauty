@@ -1,12 +1,12 @@
 {
-  "name": "iBarber",
-  "short_name": "iBarber",
-  "description": "Reserva citas en las mejores barberías de República Dominicana",
+  "name": "iBeauty",
+  "short_name": "iBeauty",
+  "description": "Reserva citas en las mejores salones de belleza de República Dominicana",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#f97316",
+  "theme_color": "#de2163",
   "categories": ["lifestyle", "business"],
   "icons": [
     {

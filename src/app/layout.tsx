@@ -6,15 +6,15 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "iBarber — Reserva tu corte",
-    template: "%s | iBarber",
+    default: "iBeauty — Reserva tu cita",
+    template: "%s | iBeauty",
   },
-  description: "Reserva citas en las mejores barberías de República Dominicana",
+  description: "Reserva citas en los mejores salones de belleza de República Dominicana",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "iBarber",
+    title: "iBeauty",
   },
 };
 

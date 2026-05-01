@@ -45,7 +45,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted))]">
-      {/* Header de la barbería */}
+      {/* Header de la salón de belleza */}
       <div className="relative overflow-hidden bg-[hsl(var(--foreground))] text-white">
         <div
           className="absolute inset-0 opacity-30"
@@ -115,10 +115,10 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
       </div>
 
       <div className="mx-auto max-w-3xl px-4 py-6 space-y-8">
-        {/* Barberos */}
+        {/* Estilistas */}
         {activeBarbers.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold mb-4">Nuestros barberos</h2>
+            <h2 className="text-lg font-semibold mb-4">Nuestras estilistas</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {activeBarbers.map((barber) => (
                 <button
@@ -200,7 +200,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
             {activeServices.length === 0 && (
               <Card className="border-none shadow-none">
                 <CardContent className="p-4 text-sm text-muted-foreground">
-                  Esta barbería aún no tiene servicios activos.
+                  Esta salón de belleza aún no tiene servicios activos.
                 </CardContent>
               </Card>
             )}
@@ -233,7 +233,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Ubicación de la barbería"
+                title="Ubicación de la salón de belleza"
               />
             </div>
             {shop.address && (
@@ -255,13 +255,13 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                   : `/${shop.slug}/reservar`
               }
             >
-              {selectedBarber ? "Reservar con este barbero" : "Reservar cita"}
+              {selectedBarber ? "Reservar con esta estilista" : "Reservar cita"}
             </Link>
           </Button>
 
           {viewerRole && viewerRole !== "client" && (
             <p className="mt-3 rounded-lg border bg-background p-3 text-center text-xs text-muted-foreground">
-              Estás viendo esta página como {viewerRole === "barber" ? "barbero" : "barbería"}.
+              Estás viendo esta página como {viewerRole === "barber" ? "estilista" : "salón de belleza"}.
               Para reservar, usa una cuenta cliente.
             </p>
           )}
@@ -278,7 +278,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
       <footer className="border-t bg-background py-4 text-center text-xs text-muted-foreground">
         Powered by{" "}
         <Link href="/" className="text-primary font-medium">
-          iBarber
+          iBeauty
         </Link>
       </footer>
     </div>

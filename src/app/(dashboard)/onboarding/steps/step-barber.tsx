@@ -49,7 +49,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
     // Modo demo: simular guardado y redirigir
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) {
       await new Promise((r) => setTimeout(r, 800));
-      toast({ title: "¡Barbería creada! (demo)", description: "ibarber.do/barber-king ya está lista" });
+      toast({ title: "¡Salón de belleza creada! (demo)", description: "ibeauty.do/barber-king ya está lista" });
       onComplete("barber-king");
       return;
     }
@@ -144,7 +144,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
         if (svcError) throw svcError;
       }
 
-      // 3. Crear el perfil de barbero del dueño
+      // 3. Crear el perfil de estilista del dueño
       let { error: barberError } = await supabase
         .from("barbers")
         .insert({
@@ -173,8 +173,8 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
       if (barberError) throw barberError;
 
       toast({
-        title: "¡Barbería creada!",
-        description: `ibarber.do/${shop.slug} ya está lista`,
+        title: "¡Salón de belleza creada!",
+        description: `ibeauty.do/${shop.slug} ya está lista`,
       });
 
       onComplete(shop.slug);
@@ -182,7 +182,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
       const msg = error instanceof Error ? error.message : "Error desconocido";
       toast({
         variant: "destructive",
-        title: "Error al crear la barbería",
+        title: "Error al crear la salón de belleza",
         description: msg,
       });
       setLoading(false);
@@ -197,7 +197,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
             <User className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Tu perfil de barbero</CardTitle>
+            <CardTitle>Tu perfil de estilista</CardTitle>
             <CardDescription>Cómo te verán tus clientes</CardDescription>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="barberName">Tu nombre como barbero *</Label>
+            <Label htmlFor="barberName">Tu nombre como estilista *</Label>
             <Input
               id="barberName"
               placeholder="Ej: Juan el Maestro"
@@ -240,12 +240,12 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
               Resumen
             </p>
             <p>
-              <span className="text-muted-foreground">Barbería:</span>{" "}
+              <span className="text-muted-foreground">Salón de belleza:</span>{" "}
               <strong>{data.shopName}</strong>
             </p>
             <p>
               <span className="text-muted-foreground">URL:</span>{" "}
-              <strong>ibarber.do/{data.slug}</strong>
+              <strong>ibeauty.do/{data.slug}</strong>
             </p>
             <p>
               <span className="text-muted-foreground">Servicios:</span>{" "}
@@ -261,7 +261,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
               {loading ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creando...</>
               ) : (
-                "🎉 Crear barbería"
+                "🎉 Crear salón de belleza"
               )}
             </Button>
           </div>
