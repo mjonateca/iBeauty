@@ -89,7 +89,7 @@ export default async function HomePage({ searchParams }: Props) {
                 iBeauty
               </span>
               <span className="text-[10px] text-muted-foreground font-medium tracking-wide hidden sm:block">
-                República Dominicana
+                RepÃºblica Dominicana
               </span>
             </div>
           </Link>
@@ -100,7 +100,7 @@ export default async function HomePage({ searchParams }: Props) {
               size="sm"
               className="font-medium text-muted-foreground hover:text-foreground"
             >
-              <Link href="/login">Iniciar sesión</Link>
+              <Link href="/login">Iniciar sesiÃ³n</Link>
             </Button>
             <Button
               asChild
@@ -147,12 +147,12 @@ export default async function HomePage({ searchParams }: Props) {
             {/* Left */}
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white/90 mb-6 backdrop-blur-sm">
-                <Zap className="h-3.5 w-3.5 text-amber-400" />
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
                 Plataforma #1 en RD
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.08] tracking-tight mb-5">
-                Tu salón de belleza<br />
+                Tu salÃ³n de belleza<br />
                 favorita,{" "}
                 <span style={{ color: "hsl(44, 94%, 60%)" }}>
                   a un clic
@@ -160,14 +160,14 @@ export default async function HomePage({ searchParams }: Props) {
               </h1>
 
               <p className="text-white/65 text-lg mb-8 leading-relaxed max-w-md">
-                Encuentra las mejores salón de bellezas de República Dominicana, elige
+                Encuentra las mejores salÃ³n de bellezas de RepÃºblica Dominicana, elige
                 tu estilista y reserva en segundos. Sin llamadas, sin esperas.
               </p>
 
               <div className="flex flex-wrap gap-x-5 gap-y-2 mb-10">
                 {[
                   "Sin comisiones",
-                  "Confirmación instantánea",
+                  "ConfirmaciÃ³n instantÃ¡nea",
                   "100% gratis para clientes",
                 ].map((text) => (
                   <div key={text} className="flex items-center gap-1.5 text-white/65 text-sm">
@@ -216,7 +216,7 @@ export default async function HomePage({ searchParams }: Props) {
               </div>
             </div>
 
-            {/* Right — decorative preview card */}
+            {/* Right â decorative preview card */}
             <div className="hidden md:flex items-center justify-center">
               <div className="relative w-full max-w-sm">
                 <div className="rounded-2xl border border-white/15 bg-white/8 backdrop-blur-xl p-6 shadow-2xl">
@@ -228,21 +228,21 @@ export default async function HomePage({ searchParams }: Props) {
                       B
                     </div>
                     <div>
-                      <p className="text-white font-bold text-sm">Salón de belleza Premium</p>
+                      <p className="text-white font-bold text-sm">SalÃ³n de belleza Premium</p>
                       <p className="text-white/50 text-xs flex items-center gap-1">
                         <MapPin className="h-3 w-3" /> Santo Domingo
                       </p>
                     </div>
-                    <div className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                       Abierto
                     </div>
                   </div>
                   <div className="space-y-2.5 mb-5">
                     {[
-                      { name: "Corte clásico", price: "RD$350", time: "30 min" },
+                      { name: "Corte clÃ¡sico", price: "RD$350", time: "30 min" },
                       { name: "Fade + barba", price: "RD$550", time: "45 min" },
-                      { name: "Diseño completo", price: "RD$750", time: "60 min" },
+                      { name: "DiseÃ±o completo", price: "RD$750", time: "60 min" },
                     ].map((s) => (
                       <div key={s.name} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5">
                         <span className="text-white/85 text-sm font-medium">{s.name}</span>
@@ -259,17 +259,17 @@ export default async function HomePage({ searchParams }: Props) {
                     className="w-full py-2.5 rounded-xl text-center font-bold text-sm shadow-md cursor-pointer"
                     style={{ background: "hsl(44,94%,52%)", color: "#0d1117" }}
                   >
-                    Reservar cita →
+                    Reservar cita â
                   </div>
                 </div>
                 {/* Floating badge */}
                 <div className="absolute -bottom-5 -left-5 bg-white rounded-xl px-4 py-2.5 shadow-xl border border-border flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <CalendarCheck className="h-4 w-4 text-emerald-600" />
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                    <CalendarCheck className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800">Reserva confirmada</p>
-                    <p className="text-[10px] text-slate-500">Hoy · 3:00 PM</p>
+                    <p className="text-[10px] text-slate-500">Hoy Â· 3:00 PM</p>
                   </div>
                 </div>
               </div>
@@ -282,7 +282,7 @@ export default async function HomePage({ searchParams }: Props) {
       <section className="border-b bg-card">
         <div className="max-w-6xl mx-auto px-4 py-5 grid grid-cols-3 divide-x divide-border">
           {[
-            { icon: Sparkles, value: shops.length > 0 ? `${shops.length}+` : "10+", label: "Salón de bellezas activas" },
+            { icon: Sparkles, value: shops.length > 0 ? `${shops.length}+` : "10+", label: "SalÃ³n de bellezas activas" },
             { icon: Users, value: "500+", label: "Clientes atendidos" },
             { icon: Clock, value: "24/7", label: "Reservas online" },
           ].map(({ icon: Icon, value, label }) => (
@@ -299,24 +299,24 @@ export default async function HomePage({ searchParams }: Props) {
         </div>
       </section>
 
-      {/* CÓMO FUNCIONA */}
+      {/* CÃMO FUNCIONA */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "hsl(174,72%,34%)" }}>
               Proceso simple
             </p>
-            <h2 className="text-3xl md:text-4xl font-black text-foreground">¿Cómo funciona?</h2>
+            <h2 className="text-3xl md:text-4xl font-black text-foreground">Â¿CÃ³mo funciona?</h2>
             <p className="text-muted-foreground mt-3 max-w-md mx-auto">
-              Reserva tu próximo corte en menos de 2 minutos
+              Reserva tu prÃ³ximo corte en menos de 2 minutos
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
             {[
-              { step: "01", icon: Search, title: "Busca tu salón de belleza", desc: "Filtra por ciudad y encuentra la salón de belleza perfecta cerca de ti." },
-              { step: "02", icon: CalendarCheck, title: "Elige estilista y hora", desc: "Selecciona tu estilista favorito y el horario disponible que más te convenga." },
-              { step: "03", icon: Star, title: "Disfruta tu cita", desc: "Recibe confirmación al instante y llega a tu cita sin esperas." },
+              { step: "01", icon: Search, title: "Busca tu salÃ³n de belleza", desc: "Filtra por ciudad y encuentra la salÃ³n de belleza perfecta cerca de ti." },
+              { step: "02", icon: CalendarCheck, title: "Elige estilista y hora", desc: "Selecciona tu estilista favorito y el horario disponible que mÃ¡s te convenga." },
+              { step: "03", icon: Star, title: "Disfruta tu cita", desc: "Recibe confirmaciÃ³n al instante y llega a tu cita sin esperas." },
             ].map(({ step, icon: Icon, title, desc }) => (
               <div key={step} className="relative rounded-2xl border bg-card p-7 hover:border-primary/30 hover:shadow-lg transition-all duration-300 group">
                 <div className="flex items-start justify-between mb-5">
@@ -349,11 +349,11 @@ export default async function HomePage({ searchParams }: Props) {
               <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "hsl(174,72%,34%)" }}>
                 Disponibles ahora
               </p>
-              <h2 className="text-2xl font-black text-foreground">Salón de bellezas en {selectedCity}</h2>
+              <h2 className="text-2xl font-black text-foreground">SalÃ³n de bellezas en {selectedCity}</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {shops.length > 0
                   ? `${shops.length} establecimiento${shops.length > 1 ? "s" : ""} verificado${shops.length > 1 ? "s" : ""}`
-                  : "Sin establecimientos en esta zona aún"}
+                  : "Sin establecimientos en esta zona aÃºn"}
               </p>
             </div>
             <Link
@@ -361,7 +361,7 @@ export default async function HomePage({ searchParams }: Props) {
               className="hidden sm:flex items-center gap-1.5 text-sm font-bold hover:underline underline-offset-4 transition-colors"
               style={{ color: "hsl(174,72%,34%)" }}
             >
-              Registrar mi salón de belleza <ArrowRight className="h-4 w-4" />
+              Registrar mi salÃ³n de belleza <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
@@ -370,10 +370,10 @@ export default async function HomePage({ searchParams }: Props) {
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "hsl(174,30%,93%)" }}>
                 <Sparkles className="h-8 w-8" style={{ color: "hsl(174,72%,34%)" }} />
               </div>
-              <p className="font-bold text-lg mb-1">No hay salón de bellezas activas aquí</p>
+              <p className="font-bold text-lg mb-1">No hay salÃ³n de bellezas activas aquÃ­</p>
               <p className="text-sm text-muted-foreground mb-5">Prueba con otra ciudad o regresa pronto.</p>
               <Link href="/register" className="inline-flex items-center gap-1.5 text-sm font-bold hover:underline underline-offset-4" style={{ color: "hsl(174,72%,34%)" }}>
-                ¿Tienes una salón de belleza? Regístrala gratis →
+                Â¿Tienes una salÃ³n de belleza? RegÃ­strala gratis â
               </Link>
             </div>
           ) : (
@@ -406,8 +406,8 @@ export default async function HomePage({ searchParams }: Props) {
                           {initials}
                         </div>
                       </div>
-                      <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 backdrop-blur-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/30 backdrop-blur-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                         Activa
                       </div>
                     </div>
@@ -418,7 +418,7 @@ export default async function HomePage({ searchParams }: Props) {
                         <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors leading-tight">{shop.name}</h3>
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{shop.city || "Ciudad"}{shop.country_name ? ` · ${shop.country_name}` : ""}</span>
+                          <span className="truncate">{shop.city || "Ciudad"}{shop.country_name ? ` Â· ${shop.country_name}` : ""}</span>
                         </p>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed flex-1">
@@ -430,7 +430,7 @@ export default async function HomePage({ searchParams }: Props) {
                           <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                         </span>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
                           <span className="font-medium">Nuevo</span>
                         </div>
                       </div>
@@ -443,20 +443,20 @@ export default async function HomePage({ searchParams }: Props) {
         </div>
       </section>
 
-      {/* WHY IBARBER */}
+      {/* WHY IBEAUTY */}
       <section className="py-20 px-4 bg-card">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "hsl(174,72%,34%)" }}>
-              Por qué iBeauty
+              Por quÃ© iBeauty
             </p>
             <h2 className="text-3xl md:text-4xl font-black text-foreground">Todo lo que necesitas</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-3">
             {[
               { icon: Zap, title: "Reserva en segundos", desc: "Sin llamadas, sin WhatsApp. Elige hora disponible y confirma al instante.", accent: "hsl(44,94%,50%)", bg: "hsl(44,94%,96%)" },
-              { icon: Shield, title: "Sin comisiones", desc: "No cobramos comisión por cita. El 100% del pago va directo a la salón de belleza.", accent: "hsl(174,72%,34%)", bg: "hsl(174,72%,96%)" },
-              { icon: TrendingUp, title: "Gestión inteligente", desc: "Las salón de bellezas gestionan su agenda, reducen no-shows y hacen crecer su negocio.", accent: "hsl(174,72%,34%)", bg: "hsl(174,72%,96%)" },
+              { icon: Shield, title: "Sin comisiones", desc: "No cobramos comisiÃ³n por cita. El 100% del pago va directo a la salÃ³n de belleza.", accent: "hsl(174,72%,34%)", bg: "hsl(174,72%,96%)" },
+              { icon: TrendingUp, title: "GestiÃ³n inteligente", desc: "Las salÃ³n de bellezas gestionan su agenda, reducen no-shows y hacen crecer su negocio.", accent: "hsl(174,72%,34%)", bg: "hsl(174,72%,96%)" },
             ].map(({ icon: Icon, title, desc, accent, bg }) => (
               <div key={title} className="rounded-2xl border p-7 hover:shadow-md transition-all group">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 shadow-sm" style={{ background: bg, color: accent }}>
@@ -488,19 +488,19 @@ export default async function HomePage({ searchParams }: Props) {
             <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
               <div className="max-w-lg">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-bold text-white/85 mb-5">
-                  <Shield className="h-3.5 w-3.5 text-amber-400" />
+                  <Shield className="h-3.5 w-3.5 text-amber-500" />
                   Para propietarios
                 </div>
                 <h2 className="text-3xl md:text-4xl font-black text-white mb-4 leading-tight">
-                  ¿Tienes una salón de belleza?{" "}
-                  <span style={{ color: "hsl(44, 94%, 60%)" }}>Regístrala gratis.</span>
+                  Â¿Tienes una salÃ³n de belleza?{" "}
+                  <span style={{ color: "hsl(44, 94%, 60%)" }}>RegÃ­strala gratis.</span>
                 </h2>
                 <p className="text-white/60 text-base leading-relaxed">
                   Gestiona tu agenda, reduce las cancelaciones y recibe reservas online 24/7.
                   Sin mensualidades para empezar.
                 </p>
                 <div className="flex flex-wrap gap-4 mt-5">
-                  {["Agenda digital", "Pagos online", "Panel de análisis"].map((f) => (
+                  {["Agenda digital", "Pagos online", "Panel de anÃ¡lisis"].map((f) => (
                     <div key={f} className="flex items-center gap-1.5 text-white/65 text-sm">
                       <CheckCircle2 className="h-4 w-4" style={{ color: "hsl(44,94%,60%)" }} />
                       {f}
@@ -516,14 +516,14 @@ export default async function HomePage({ searchParams }: Props) {
                   style={{ background: "hsl(44, 94%, 52%)", color: "#0d1117" }}
                 >
                   <Link href="/register">
-                    Registrar mi salón de belleza
+                    Registrar mi salÃ³n de belleza
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
                 <Link href="/login" className="text-center text-sm font-semibold text-white/50 hover:text-white/80 transition-colors">
-                  Ya tengo cuenta → Iniciar sesión
+                  Ya tengo cuenta â Iniciar sesiÃ³n
                 </Link>
-                <p className="text-center text-xs text-white/35">Sin tarjeta de crédito · Gratis para empezar</p>
+                <p className="text-center text-xs text-white/35">Sin tarjeta de crÃ©dito Â· Gratis para empezar</p>
               </div>
             </div>
           </div>
@@ -542,7 +542,7 @@ export default async function HomePage({ searchParams }: Props) {
                 <span className="font-black text-base text-foreground">iBeauty</span>
               </div>
               <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                La plataforma de reservas para salón de bellezas de República Dominicana.
+                La plataforma de reservas para salÃ³n de bellezas de RepÃºblica Dominicana.
               </p>
             </div>
             <div className="flex gap-12">
@@ -550,9 +550,9 @@ export default async function HomePage({ searchParams }: Props) {
                 <p className="text-xs font-bold text-foreground mb-3 uppercase tracking-wider">Plataforma</p>
                 <div className="flex flex-col gap-2">
                   {[
-                    { href: "/login", label: "Iniciar sesión" },
+                    { href: "/login", label: "Iniciar sesiÃ³n" },
                     { href: "/register", label: "Registrarse" },
-                    { href: "/register", label: "Registrar salón de belleza" },
+                    { href: "/register", label: "Registrar salÃ³n de belleza" },
                   ].map((link) => (
                     <Link key={link.label} href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                       {link.label}
@@ -564,9 +564,9 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
           <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} iBeauty · Plataforma de reservas para salón de bellezas en República Dominicana
+              Â© {new Date().getFullYear()} iBeauty Â· Plataforma de reservas para salÃ³n de bellezas en RepÃºblica Dominicana
             </p>
-            <p className="text-xs text-muted-foreground">República Dominicana 🇩🇴</p>
+            <p className="text-xs text-muted-foreground">RepÃºblica Dominicana ð©ð´</p>
           </div>
         </div>
       </footer>
