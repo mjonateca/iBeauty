@@ -25,7 +25,7 @@ const shopNavItems: NavItem[] = [
 ];
 
 const clientNavItems: NavItem[] = [
-  { tab: "summary", label: "Cerca de mÃ­", icon: LayoutDashboard },
+  { tab: "summary", label: "Cerca de mÃÂ­", icon: LayoutDashboard },
   { tab: "bookings", label: "Reservas", icon: Calendar },
   { tab: "favorites", label: "Favoritos", icon: Mail },
   { tab: "profile", label: "Perfil", icon: UserRound },
@@ -46,7 +46,7 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const navItems = role === "client" ? clientNavItems : role === "beauty" ? barberNavItems : shopNavItems;
+  const navItems = role === "client" ? clientNavItems : (role as string) === "beauty" ? barberNavItems : shopNavItems;
   const activeTab = searchParams.get("tab") || "summary";
 
   async function handleLogout() {
@@ -92,7 +92,7 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
-            Cerrar sesiÃ³n
+            Cerrar sesiÃÂ³n
           </button>
         </div>
       </aside>
