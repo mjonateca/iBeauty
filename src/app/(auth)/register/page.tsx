@@ -168,11 +168,11 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="specialty">Especialidad</Label>
-                <Input id="specialty" placeholder="Fade, barba, diseño..." {...register("specialty")} />
+                <Input id="specialty" placeholder="Coloración, alisado, manicura..." {...register("specialty")} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="shopSlug">Salón de belleza donde trabajas</Label>
-                <Input id="shopSlug" placeholder="slug de la salón de belleza, opcional" {...register("shopSlug")} />
+                <Input id="shopSlug" placeholder="slug de la salÃ³n de belleza, opcional" {...register("shopSlug")} />
               </div>
             </div>
           )}
@@ -259,11 +259,11 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Descripción</Label>
+                <Label htmlFor="description">DescripciÃ³n</Label>
                 <textarea
                   id="description"
                   className="flex min-h-[84px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
-                  placeholder="Especialidad, ambiente, zona o ventajas de tu salón de belleza."
+                  placeholder="Especialidad, ambiente, zona o ventajas de tu salÃ³n de belleza."
                   {...register("description")}
                 />
               </div>
@@ -272,7 +272,7 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña *</Label>
+              <Label htmlFor="password">ContraseÃ±a *</Label>
               <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
               {errors.password && (
                 <p className="text-xs text-destructive">{errors.password.message}</p>
@@ -294,7 +294,7 @@ export default function RegisterPage() {
                 Creando cuenta...
               </>
             ) : accountType === "barbershop" ? (
-              "Registrar salón de belleza"
+              "Registrar salÃ³n de belleza"
             ) : accountType === "barber" ? (
               "Crear cuenta de estilista"
             ) : (
@@ -304,9 +304,9 @@ export default function RegisterPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          ¿Ya tienes cuenta?{" "}
+          Â¿Ya tienes cuenta?{" "}
           <Link href="/login" className="text-primary font-medium hover:underline">
-            Inicia sesión
+            Inicia sesiÃ³n
           </Link>
         </p>
       </CardContent>
