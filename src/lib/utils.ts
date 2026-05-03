@@ -16,9 +16,9 @@ export function slugify(text: string): string {
 
 export function formatCurrency(
   amount: number,
-  currency = "DOP"
+  currency = "USD"
 ): string {
-  return new Intl.NumberFormat("es-DO", {
+  return new Intl.NumberFormat("es", {
     style: "currency",
     currency,
     minimumFractionDigits: 0,

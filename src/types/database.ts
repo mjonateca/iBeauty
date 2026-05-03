@@ -36,10 +36,10 @@ export interface Shop {
   slug: string;
   logo_url: string | null;
   banner_url: string | null;
+  maps_url: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
-  maps_url: string | null;
   currency: string;
   currency_symbol: string;
   phone: string | null;

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     default: "iBarber — Reserva tu corte",
     template: "%s | iBarber",
   },
-  description: "Reserva citas en las mejores barberías de República Dominicana",
+  description: "Reserva citas en barberías de cualquier país, elige servicio y horario en minutos.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

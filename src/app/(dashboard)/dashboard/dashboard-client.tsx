@@ -223,8 +223,7 @@ export default function DashboardClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = (searchParams.get("tab") || initialTab) as TabId;
-    const [showManualBooking, setShowManualBooking] = useState(false);
-  const [manualForm, setManualForm] = useState({ client_name: "", client_phone: "", barber_id: "", service_id: "", date: "", start_time: "" });const [bookings, setBookings] = useState(initialBookings);
+  const [bookings, setBookings] = useState(initialBookings);
   const [services, setServices] = useState(initialServices);
   const [barbers, setBarbers] = useState(initialBarbers);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -492,10 +491,10 @@ export default function DashboardClient({
       {currentTab === "summary" && (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard label="Ingresos cobrados" value={formatCurrency(analytics.realizedRevenue)} sub={`Estimado: ${formatCurrency(analytics.estimatedRevenue)}`} icon={CreditCard} color="teal" />
+            <KpiCard label="Ingresos cobrados" value={formatCurrency(analytics.realizedRevenue, shopState.currency)} sub={`Estimado: ${formatCurrency(analytics.estimatedRevenue, shopState.currency)}`} icon={CreditCard} color="teal" />
             <KpiCard label="Citas hoy" value={todayBookings.length} sub={`Confirmadas: ${todayBookings.filter((b) => b.status === "confirmed").length}`} icon={CalendarDays} color="gold" />
-            <KpiCard label="Esperado esta semana" value={formatCurrency(stats.expectedWeek)} sub={`Hoy: ${formatCurrency(stats.expectedToday)}`} icon={TrendingUp} color="teal" />
-            <KpiCard label="Ticket medio" value={formatCurrency(analytics.avgTicket)} sub={`${analytics.avgServiceTime} min por servicio`} icon={Star} color="gold" />
+            <KpiCard label="Esperado esta semana" value={formatCurrency(stats.expectedWeek, shopState.currency)} sub={`Hoy: ${formatCurrency(stats.expectedToday, shopState.currency)}`} icon={TrendingUp} color="teal" />
+            <KpiCard label="Ticket medio" value={formatCurrency(analytics.avgTicket, shopState.currency)} sub={`${analytics.avgServiceTime} min por servicio`} icon={Star} color="gold" />
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -542,8 +541,8 @@ export default function DashboardClient({
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BarChart title="Servicios mÃÂÃÂ¡s solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavÃÂÃÂ­a." />
-            <BarChart title="Barberos con mÃÂÃÂ¡s reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavÃÂÃÂ­a." />
+            <BarChart title="Servicios mÃÂÃÂ¡s solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavÃÂÃÂ­a." />
+            <BarChart title="Barberos con mÃÂÃÂ¡s reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavÃÂÃÂ­a." />
             <BarChart title="Franjas con mÃÂÃÂ¡s demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavÃÂÃÂ­a." />
             <BarChart title="DÃÂÃÂ­as con mÃÂÃÂ¡s demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavÃÂÃÂ­a." />
           </div>
@@ -595,90 +594,7 @@ export default function DashboardClient({
       {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ BOOKINGS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
       {currentTab === "bookings" && (
         <Card className="shadow-none">
-          <CardHeader><CardTitle>Reservas prÃÂÃÂ³ximas</CardTitle><div style={{display:"flex",justifyContent:"flex-end",marginTop:"8px"}}>
-          <button
-            onClick={() => setShowManualBooking(v => !v)}
-            className="text-xs border border-input px-3 py-1 rounded-md hover:bg-muted"
-          >
-            {showManualBooking ? "Cancelar" : "+ Nueva reserva"}
-          </button>
-        </div>
-        </CardHeader>
-        {showManualBooking && (
-          <div className="mx-4 mb-4 p-4 border rounded-lg bg-muted/30 space-y-3">
-            <p className="text-sm font-medium">Reserva manual</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground">Nombre cliente *</label>
-                <input className="w-full border rounded px-2 py-1 text-sm mt-1" placeholder="Juan PÃ©rez"
-                  value={manualForm.client_name} onChange={e => setManualForm(f=>({...f, client_name: e.target.value}))} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">TelÃ©fono</label>
-                <input className="w-full border rounded px-2 py-1 text-sm mt-1" placeholder="+1 809 000 0000"
-                  value={manualForm.client_phone} onChange={e => setManualForm(f=>({...f, client_phone: e.target.value}))} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Barbero</label>
-                <select className="w-full border rounded px-2 py-1 text-sm mt-1 bg-background"
-                  value={manualForm.barber_id} onChange={e => setManualForm(f=>({...f, barber_id: e.target.value}))}>
-                  <option value="">Seleccionar...</option>
-                  {barbers.map(b => <option key={b.id} value={b.id}>{b.display_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Servicio</label>
-                <select className="w-full border rounded px-2 py-1 text-sm mt-1 bg-background"
-                  value={manualForm.service_id} onChange={e => setManualForm(f=>({...f, service_id: e.target.value}))}>
-                  <option value="">Seleccionar...</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Fecha *</label>
-                <input type="date" className="w-full border rounded px-2 py-1 text-sm mt-1"
-                  value={manualForm.date} onChange={e => setManualForm(f=>({...f, date: e.target.value}))} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Hora *</label>
-                <input type="time" className="w-full border rounded px-2 py-1 text-sm mt-1"
-                  value={manualForm.start_time} onChange={e => setManualForm(f=>({...f, start_time: e.target.value}))} />
-              </div>
-            </div>
-            <button
-              className="w-full bg-primary text-primary-foreground rounded py-2 text-sm font-medium hover:bg-primary/90"
-              onClick={async () => {
-                if (!manualForm.client_name || !manualForm.date || !manualForm.start_time) {
-                  toast({ variant: "destructive", title: "Faltan datos", description: "Nombre, fecha y hora son obligatorios." });
-                  return;
-                }
-                const res = await fetch("/api/bookings", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    client_name: manualForm.client_name,
-                    client_phone: manualForm.client_phone || null,
-                    barber_id: manualForm.barber_id || null,
-                    service_id: manualForm.service_id || null,
-                    date: manualForm.date,
-                    start_time: manualForm.start_time,
-                    manual: true,
-                  }),
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                  toast({ variant: "destructive", title: "Error", description: data.error || "No se pudo crear la reserva." });
-                } else {
-                  toast({ title: "Reserva creada", description: "La reserva manual se ha registrado." });
-                  setShowManualBooking(false);
-                  setManualForm({ client_name: "", client_phone: "", barber_id: "", service_id: "", date: "", start_time: "" });
-                }
-              }}
-            >
-              Guardar reserva
-            </button>
-          </div>
-        )}
+          <CardHeader><CardTitle>Reservas prÃÂÃÂ³ximas</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {bookings.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas prÃÂÃÂ³ximas.</p>
@@ -804,7 +720,7 @@ export default function DashboardClient({
                           <span className="text-xs text-muted-foreground">{barber.barber_services?.length || 0} servicios</span>
                           {barberStats && <span className="text-xs text-muted-foreground">{barberStats.count} reservas</span>}
                           {bestStat && <span className="text-xs text-emerald-600">{Math.round(bestStat.completionRate * 100)}% completadas</span>}
-                          {barberStats && <span className="text-xs font-semibold text-primary">{formatCurrency(barberStats.revenue)}</span>}
+                          {barberStats && <span className="text-xs font-semibold text-primary">{formatCurrency(barberStats.revenue, shopState.currency)}</span>}
                         </div>
                       </div>
 

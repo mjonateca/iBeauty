@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   const [{ data: shop }, { data: barber }, { data: service }, { data: subscription }] = await Promise.all([
     admin
       .from("shops")
-      .select("id, is_active, opening_hours, payments_enabled, online_payment_mode, deposit_required, deposit_amount")
+      .select("id, is_active, opening_hours, payments_enabled, online_payment_mode, deposit_required, deposit_amount, currency")
       .eq("id", parsed.data.shop_id)
       .maybeSingle(),
     admin.from("barbers").select("id, shop_id, is_active").eq("id", parsed.data.barber_id).maybeSingle(),
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       payment_status: "pending",
       payment_required: paymentRequired,
       payment_amount: paymentAmount,
-      payment_currency: service.currency || "DOP",
+      payment_currency: service.currency || shop.currency || "USD",
     })
     .select()
     .single();

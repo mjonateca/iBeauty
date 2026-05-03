@@ -61,8 +61,8 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       accountType: "client",
-      countryCode: "DO",
-      city: "Santo Domingo",
+      countryCode: "",
+      city: "",
     },
   });
 
@@ -225,6 +225,7 @@ export default function RegisterPage() {
                   },
                 })}
               >
+                <option value="">Selecciona un país</option>
                 {COUNTRIES.map((country) => (
                   <option key={country.code} value={country.code}>
                     {country.name}
@@ -238,8 +239,10 @@ export default function RegisterPage() {
               <select
                 id="city"
                 className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
+                disabled={!countryCode}
                 {...register("city")}
               >
+                <option value="">{countryCode ? "Selecciona una ciudad" : "Selecciona un país primero"}</option>
                 {cities.map((city) => (
                   <option key={city} value={city}>
                     {city}

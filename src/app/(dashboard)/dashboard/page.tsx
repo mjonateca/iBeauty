@@ -185,14 +185,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     await Promise.all([
       admin
         .from("bookings")
-        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price)")
+        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price, currency)")
         .eq("shop_id", shop.id)
         .eq("date", today)
         .not("status", "in", '("cancelled","no_show")')
         .order("start_time"),
       admin
         .from("bookings")
-        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price)")
+        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price, currency)")
         .eq("shop_id", shop.id)
         .gte("date", today)
         .not("status", "in", '("cancelled","no_show")')

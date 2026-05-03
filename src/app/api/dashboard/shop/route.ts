@@ -10,6 +10,7 @@ const daySchema = z.object({
 
 const shopSchema = z.object({
   opening_hours: z.record(daySchema).optional(),
+  name: z.string().min(2).optional(),
   description: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),

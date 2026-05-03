@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { getCitiesForCountry, getCountryName, getCurrencyForCountry } from "@/lib/locations";
 import type { OnboardingData } from "../onboarding-wizard";
 
 const schema = z.object({
@@ -56,6 +57,10 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
 
     const supabase = createClient();
 
+    const targetCountryCode = data.countryCode || "US";
+    const targetCountryName = data.countryName || getCountryName(targetCountryCode);
+    const targetCity = data.city || getCitiesForCountry(targetCountryCode)[0] || "New York";
+
     try {
       // 1. Crear el shop
       let { data: shop, error: shopError } = await supabase
@@ -67,9 +72,10 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
           phone: data.phone || null,
           whatsapp: data.phone || null,
           address: data.address || null,
-          country_code: data.countryCode || "DO",
-          country_name: data.countryName || "República Dominicana",
-          city: data.city || "Santo Domingo",
+          country_code: targetCountryCode,
+          country_name: targetCountryName,
+          city: targetCity,
+          currency: getCurrencyForCountry(targetCountryCode).currency,
           description: data.description || null,
           opening_hours: {
             lunes:     { open: "09:00", close: "19:00", closed: false },
@@ -84,7 +90,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
         .select()
         .single();
 
-      if (shopError && /country_code|country_name|city|description|whatsapp/.test(shopError.message)) {
+      if (shopError && /country_code|country_name|city|description|whatsapp|currency/.test(shopError.message)) {
         const fallback = await supabase
           .from("shops")
           .insert({
@@ -121,7 +127,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
               name: s.name,
               duration_min: s.duration_min,
               price: s.price,
-              currency: "DOP",
+              currency: shop.currency || "USD",
               description: null,
               category: "General",
               is_visible: true,
@@ -136,7 +142,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
                 name: s.name,
                 duration_min: s.duration_min,
                 price: s.price,
-                currency: "DOP",
+                currency: shop.currency || "USD",
               }))
             );
           svcError = fallback.error;

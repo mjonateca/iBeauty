@@ -35,6 +35,7 @@ export const demoShop: Shop = {
   online_payment_mode: "optional",
   currency: "DOP",
   currency_symbol: "RD$",
+  maps_url: null,
   created_at: new Date().toISOString(),
 };
 

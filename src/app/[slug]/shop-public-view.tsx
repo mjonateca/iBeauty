@@ -102,15 +102,15 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                 <p className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1">
                   <MapPin className="h-3.5 w-3.5" />
                   {shop.address}
-                  {shop.maps_url && (
-                    <a href={shop.maps_url} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-white">
+                  {mapsExternalUrl && (
+                    <a href={mapsExternalUrl} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-white">
                       Ver mapa <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
                 </p>
               )}
-              {!shop.address && shop.maps_url && (
-                <a href={shop.maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1 hover:text-white">
+              {!shop.address && mapsExternalUrl && (
+                <a href={mapsExternalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1 hover:text-white">
                   <MapPin className="h-3.5 w-3.5" />
                   Ver ubicaciÃ³n en Google Maps <ExternalLink className="h-3 w-3" />
                 </a>
@@ -280,7 +280,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
 
           {shop.deposit_required && shop.deposit_amount > 0 && (
             <p className="text-xs text-center text-muted-foreground mt-3">
-              Se requiere depÃ³sito de {formatCurrency(shop.deposit_amount, "DOP")} al reservar
+              Se requiere depÃ³sito de {formatCurrency(shop.deposit_amount, shop.currency || "USD")} al reservar
             </p>
           )}
         </div>

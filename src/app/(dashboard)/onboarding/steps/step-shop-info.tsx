@@ -55,8 +55,8 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
       slug: data.slug || "",
       phone: data.phone || "",
       address: data.address || "",
-      countryCode: data.countryCode || "DO",
-      city: data.city || "Santo Domingo",
+      countryCode: data.countryCode || "",
+      city: data.city || "",
       description: data.description || "",
     },
   });
@@ -207,6 +207,7 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
                   },
                 })}
               >
+                <option value="">Selecciona un país</option>
                 {COUNTRIES.map((country) => (
                   <option key={country.code} value={country.code}>
                     {country.name}
@@ -219,8 +220,10 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
               <select
                 id="city"
                 className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
+                disabled={!countryCode}
                 {...register("city")}
               >
+                <option value="">{countryCode ? "Selecciona una ciudad" : "Selecciona un país primero"}</option>
                 {cities.map((city) => (
                   <option key={city} value={city}>
                     {city}

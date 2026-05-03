@@ -37,9 +37,9 @@ type ListedShop = {
 
 export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams;
-  const selectedCountry = params.country || "DO";
-  const selectedCity = params.city || "tu ciudad";
-  const cities = getCitiesForCountry(selectedCountry);
+  const selectedCountry = params.country || "";
+  const selectedCity = params.city || "";
+  const cities = selectedCountry ? getCitiesForCountry(selectedCountry) : [];
 
   let shops: ListedShop[] = [];
 
@@ -52,21 +52,25 @@ export default async function HomePage({ searchParams }: Props) {
       .select("*")
       .order("city", { ascending: true })
       .order("name", { ascending: true })
-      .limit(24);
+      .limit(48);
 
     const all = (data || []) as ListedShop[];
     const active = all.filter((shop) => shop.is_active !== false);
-    const countryMatches = active.filter(
-      (shop) => !shop.country_code || shop.country_code === selectedCountry
-    );
-    shops = [
-      ...countryMatches.filter(
-        (shop) => shop.city?.toLowerCase() === selectedCity.toLowerCase()
-      ),
-      ...countryMatches.filter(
-        (shop) => shop.city?.toLowerCase() !== selectedCity.toLowerCase()
-      ),
-    ];
+    if (selectedCountry) {
+      const countryMatches = active.filter(
+        (shop) => !shop.country_code || shop.country_code === selectedCountry
+      );
+      if (selectedCity) {
+        shops = [
+          ...countryMatches.filter((shop) => shop.city?.toLowerCase() === selectedCity.toLowerCase()),
+          ...countryMatches.filter((shop) => shop.city?.toLowerCase() !== selectedCity.toLowerCase()),
+        ];
+      } else {
+        shops = countryMatches;
+      }
+    } else {
+      shops = active;
+    }
   }
 
   return (
@@ -89,7 +93,7 @@ export default async function HomePage({ searchParams }: Props) {
                 iBarber
               </span>
               <span className="text-[10px] text-muted-foreground font-medium tracking-wide hidden sm:block">
-                RepÃºblica local
+                Agenda online global
               </span>
             </div>
           </Link>
@@ -148,7 +152,7 @@ export default async function HomePage({ searchParams }: Props) {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white/90 mb-6 backdrop-blur-sm">
                 <Zap className="h-3.5 w-3.5 text-amber-400" />
-                Plataforma #1 en RD
+                Descubre barberías activas
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.08] tracking-tight mb-5">
@@ -160,8 +164,7 @@ export default async function HomePage({ searchParams }: Props) {
               </h1>
 
               <p className="text-white/65 text-lg mb-8 leading-relaxed max-w-md">
-                Encuentra las mejores barberÃ­as de RepÃºblica local, elige
-                tu barbero y reserva en segundos. Sin llamadas, sin esperas.
+                Encuentra barberías por país y ciudad, elige tu barbero y reserva en segundos. Sin llamadas, sin esperas.
               </p>
 
               <div className="flex flex-wrap gap-x-5 gap-y-2 mb-10">
@@ -179,7 +182,7 @@ export default async function HomePage({ searchParams }: Props) {
 
               <div className="bg-white/8 backdrop-blur-xl border border-white/15 rounded-2xl p-4 shadow-2xl">
                 <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-3 ml-1">
-                  Busca en tu ciudad
+                  Busca por país y ciudad
                 </p>
                 <form className="flex flex-col sm:flex-row gap-2.5">
                   <select
@@ -188,6 +191,7 @@ export default async function HomePage({ searchParams }: Props) {
                     className="flex-1 h-11 rounded-xl border border-white/15 bg-white/10 px-3.5 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     style={{ colorScheme: "dark" }}
                   >
+                    <option value="" className="bg-slate-900 text-white">Todos los países</option>
                     {COUNTRIES.map((country) => (
                       <option key={country.code} value={country.code} className="bg-slate-900 text-white">
                         {country.name}
@@ -200,6 +204,9 @@ export default async function HomePage({ searchParams }: Props) {
                     className="flex-1 h-11 rounded-xl border border-white/15 bg-white/10 px-3.5 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     style={{ colorScheme: "dark" }}
                   >
+                    <option value="" className="bg-slate-900 text-white">
+                      {selectedCountry ? "Todas las ciudades" : "Selecciona un país primero"}
+                    </option>
                     {cities.map((city) => (
                       <option key={city} value={city} className="bg-slate-900 text-white">{city}</option>
                     ))}
@@ -230,7 +237,7 @@ export default async function HomePage({ searchParams }: Props) {
                     <div>
                       <p className="text-white font-bold text-sm">BarberÃ­a Premium</p>
                       <p className="text-white/50 text-xs flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> tu ciudad
+                        <MapPin className="h-3 w-3" /> tu próxima cita
                       </p>
                     </div>
                     <div className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -349,11 +356,17 @@ export default async function HomePage({ searchParams }: Props) {
               <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "hsl(174,72%,34%)" }}>
                 Disponibles ahora
               </p>
-              <h2 className="text-2xl font-black text-foreground">BarberÃ­as en {selectedCity}</h2>
+              <h2 className="text-2xl font-black text-foreground">
+                {selectedCity
+                  ? `Barberías en ${selectedCity}`
+                  : selectedCountry
+                    ? `Barberías en ${COUNTRIES.find((country) => country.code === selectedCountry)?.name || "tu país"}`
+                    : "Barberías disponibles"}
+              </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {shops.length > 0
                   ? `${shops.length} establecimiento${shops.length > 1 ? "s" : ""} verificado${shops.length > 1 ? "s" : ""}`
-                  : "Sin establecimientos en esta zona aÃºn"}
+                  : "Sin establecimientos en esta búsqueda todavía"}
               </p>
             </div>
             <Link
@@ -371,7 +384,7 @@ export default async function HomePage({ searchParams }: Props) {
                 <Scissors className="h-8 w-8" style={{ color: "hsl(174,72%,34%)" }} />
               </div>
               <p className="font-bold text-lg mb-1">No hay barberÃ­as activas aquÃ­</p>
-              <p className="text-sm text-muted-foreground mb-5">Prueba con otra ciudad o regresa pronto.</p>
+              <p className="text-sm text-muted-foreground mb-5">Prueba con otro país, otra ciudad o regresa pronto.</p>
               <Link href="/register" className="inline-flex items-center gap-1.5 text-sm font-bold hover:underline underline-offset-4" style={{ color: "hsl(174,72%,34%)" }}>
                 Â¿Tienes una barberÃ­a? RegÃ­strala gratis â
               </Link>
@@ -542,7 +555,7 @@ export default async function HomePage({ searchParams }: Props) {
                 <span className="font-black text-base text-foreground">iBarber</span>
               </div>
               <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                La plataforma de reservas para barberÃ­as de RepÃºblica local.
+                La plataforma de reservas para barberías que quieren captar y gestionar citas online.
               </p>
             </div>
             <div className="flex gap-12">
@@ -564,9 +577,9 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
           <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Â© {new Date().getFullYear()} iBarber Â· Plataforma de reservas para barberÃ­as en RepÃºblica local
+              Â© {new Date().getFullYear()} iBarber Â· Plataforma de reservas para barberías
             </p>
-            <p className="text-xs text-muted-foreground">RepÃºblica local ð©ð´</p>
+            <p className="text-xs text-muted-foreground">Disponible para varios países</p>
           </div>
         </div>
       </footer>
