@@ -116,7 +116,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   confirmed: "Confirmada",
   rescheduled: "Reprogramada",
   completed: "Completada",
-  no_show: "No se presentó",
+  no_show: "No se presentÃ³",
   cancelled: "Cancelada",
 };
 
@@ -147,10 +147,10 @@ const SUBSCRIPTION_LABELS: Record<SubscriptionStatus, string> = {
 const WEEK_DAYS = [
   { key: "lunes", label: "Lunes" },
   { key: "martes", label: "Martes" },
-  { key: "miercoles", label: "Miércoles" },
+  { key: "miercoles", label: "MiÃ©rcoles" },
   { key: "jueves", label: "Jueves" },
   { key: "viernes", label: "Viernes" },
-  { key: "sabado", label: "Sábado" },
+  { key: "sabado", label: "SÃ¡bado" },
   { key: "domingo", label: "Domingo" },
 ] as const;
 
@@ -247,7 +247,7 @@ export default function DashboardClient({
         .filter((c) => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
         .map((client) => ({
           title: client.name,
-          detail: `${client.phone || client.whatsapp || "Sin teléfono"}${client.city ? ` · ${client.city}` : ""}`,
+          detail: `${client.phone || client.whatsapp || "Sin telÃ©fono"}${client.city ? ` Â· ${client.city}` : ""}`,
         })),
     [clients, clientSearch]
   );
@@ -280,7 +280,7 @@ export default function DashboardClient({
     });
     const payload = await response.json().catch(() => ({ error: "Error inesperado" }));
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se actualizó la reserva", description: payload.error });
+      toast({ variant: "destructive", title: "No se actualizÃ³ la reserva", description: payload.error });
     } else {
       setBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status } : b)));
       toast({ title: STATUS_LABELS[status] });
@@ -304,7 +304,7 @@ export default function DashboardClient({
       }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el servicio", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se creÃ³ el servicio", description: payload.error }); return; }
     setServices((prev) => [...prev, payload]);
     event.currentTarget.reset();
     toast({ title: "Servicio creado" });
@@ -325,13 +325,13 @@ export default function DashboardClient({
   }
 
   async function deleteService(service: Service) {
-    if (!window.confirm(`¿Eliminar "${service.name}"? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`Â¿Eliminar "${service.name}"? Esta acciÃ³n no se puede deshacer.`)) return;
     setDeletingServiceId(service.id);
     const response = await fetch(`/api/dashboard/services/${service.id}`, { method: "DELETE" });
     setDeletingServiceId(null);
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      toast({ variant: "destructive", title: "No se eliminó el servicio", description: payload.error });
+      toast({ variant: "destructive", title: "No se eliminÃ³ el servicio", description: payload.error });
       return;
     }
     setServices((prev) => prev.filter((s) => s.id !== service.id));
@@ -348,7 +348,7 @@ export default function DashboardClient({
       body: JSON.stringify({ shop_id: shopState.id, display_name: form.get("display_name"), specialty: form.get("specialty"), bio: form.get("bio"), service_ids: serviceIds }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el barbero", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se creÃ³ el barbero", description: payload.error }); return; }
     setBarbers((prev) => [...prev, { ...payload, barber_services: serviceIds.map((id) => ({ service_id: id })) }]);
     event.currentTarget.reset();
     toast({ title: "Barbero creado" });
@@ -369,7 +369,7 @@ export default function DashboardClient({
   }
 
   async function uploadBarberPhoto(barberId: string, file: File) {
-    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "Máx. 5 MB" }); return; }
+    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "MÃ¡x. 5 MB" }); return; }
     setUploadingBarberPhoto(barberId);
     const formData = new FormData();
     formData.append("file", file);
@@ -386,14 +386,14 @@ export default function DashboardClient({
     setSavingSchedule(true);
     const invalidDay = WEEK_DAYS.find(({ key }) => { const day = openingHours[key]; return !day.closed && day.open >= day.close; });
     if (invalidDay) {
-      toast({ variant: "destructive", title: "Horario inválido", description: `Revisa ${invalidDay.label}` });
+      toast({ variant: "destructive", title: "Horario invÃ¡lido", description: `Revisa ${invalidDay.label}` });
       setSavingSchedule(false);
       return;
     }
     const response = await fetch("/api/dashboard/shop", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opening_hours: openingHours }) });
     const payload = await response.json().catch(() => ({}));
     setSavingSchedule(false);
-    if (!response.ok) { toast({ variant: "destructive", title: "No se guardó el horario", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se guardÃ³ el horario", description: payload.error }); return; }
     setShopState(payload);
     toast({ title: "Horario actualizado" });
   }
@@ -417,7 +417,7 @@ export default function DashboardClient({
   async function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "Máx. 5 MB" }); return; }
+    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "MÃ¡x. 5 MB" }); return; }
     setBannerPreview(URL.createObjectURL(file));
     setUploadingBanner(true);
     const formData = new FormData();
@@ -474,20 +474,20 @@ export default function DashboardClient({
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{shopState.name}</h1>
-          <p className="text-sm text-muted-foreground capitalize">{shopState.city ? `${shopState.city} · ` : ""}{todayStr}</p>
+          <p className="text-sm text-muted-foreground capitalize">{shopState.city ? `${shopState.city} Â· ` : ""}{todayStr}</p>
           {subscription && (
             <span className={`mt-1.5 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${subscriptionTone(subscription.status)}`}>
               {SUBSCRIPTION_LABELS[subscription.status]}
-              {subscription.trial_ends_at ? ` · hasta ${new Date(subscription.trial_ends_at).toLocaleDateString()}` : ""}
+              {subscription.trial_ends_at ? ` Â· hasta ${new Date(subscription.trial_ends_at).toLocaleDateString()}` : ""}
             </span>
           )}
         </div>
         <Link href={`/${shopState.slug}`} target="_blank" className="inline-flex items-center gap-1.5 self-start rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors">
-          Ver página pública <ExternalLink className="h-3.5 w-3.5" />
+          Ver pÃ¡gina pÃºblica <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      {/* ── SUMMARY ── */}
+      {/* ââ SUMMARY ââ */}
       {currentTab === "summary" && (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -529,7 +529,7 @@ export default function DashboardClient({
                       <div className="h-full w-px bg-border" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{booking.clients?.name || "Cliente"}</p>
-                        <p className="text-xs text-muted-foreground truncate">{booking.services?.name} · {booking.barbers?.display_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{booking.services?.name} Â· {booking.barbers?.display_name}</p>
                       </div>
                       <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status]}`}>{STATUS_LABELS[booking.status]}</span>
                       {booking.payment_amount > 0 && <span className="shrink-0 text-sm font-semibold text-primary">{formatCurrency(booking.payment_amount, booking.payment_currency)}</span>}
@@ -541,21 +541,21 @@ export default function DashboardClient({
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BarChart title="Servicios más solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavía." />
-            <BarChart title="Barberos con más reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavía." />
-            <BarChart title="Franjas con más demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
-            <BarChart title="Días con más demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
+            <BarChart title="Servicios mÃ¡s solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavÃ­a." />
+            <BarChart title="Barberos con mÃ¡s reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavÃ­a." />
+            <BarChart title="Franjas con mÃ¡s demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavÃ­a." />
+            <BarChart title="DÃ­as con mÃ¡s demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavÃ­a." />
           </div>
 
           {analytics.evolutions.month.length > 0 && (
             <Card className="shadow-none">
-              <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Evolución mensual</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> EvoluciÃ³n mensual</CardTitle></CardHeader>
               <CardContent><MiniLineChart data={analytics.evolutions.month.slice(-6)} /></CardContent>
             </Card>
           )}
 
           <Card className="shadow-none">
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="h-4 w-4 text-primary" /> Suscripción</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="h-4 w-4 text-primary" /> SuscripciÃ³n</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {subscription ? (
                 <>
@@ -564,19 +564,19 @@ export default function DashboardClient({
                       <p className="font-medium">{SUBSCRIPTION_LABELS[subscription.status]}</p>
                       <p className="font-bold text-primary">{formatCurrency(subscription.monthly_price, subscription.currency)}/mes</p>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">Próximo corte: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">PrÃ³ximo corte: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}</p>
                     {subscription.last_payment_error && <p className="mt-2 rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{subscription.last_payment_error}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button onClick={openBillingCheckout}>{billingAction === "checkout" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Activar / renovar plan"}</Button>
-                    <Button variant="outline" onClick={openBillingPortal}>{billingAction === "portal" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gestionar método de pago"}</Button>
+                    <Button variant="outline" onClick={openBillingPortal}>{billingAction === "portal" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gestionar mÃ©todo de pago"}</Button>
                   </div>
                   {paymentMethods.length > 0 && (
                     <div className="space-y-2">
                       {paymentMethods.map((pm) => (
                         <div key={pm.id} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
                           <CreditCard className="h-4 w-4 text-muted-foreground" />
-                          <span>{pm.brand?.toUpperCase() || "Tarjeta"} ···· {pm.last4 || "****"}</span>
+                          <span>{pm.brand?.toUpperCase() || "Tarjeta"} Â·Â·Â·Â· {pm.last4 || "****"}</span>
                           {pm.is_default && <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Predeterminada</span>}
                         </div>
                       ))}
@@ -584,28 +584,28 @@ export default function DashboardClient({
                   )}
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">La suscripción se está preparando.</p>
+                <p className="text-sm text-muted-foreground">La suscripciÃ³n se estÃ¡ preparando.</p>
               )}
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* ── BOOKINGS ── */}
+      {/* ââ BOOKINGS ââ */}
       {currentTab === "bookings" && (
         <Card className="shadow-none">
-          <CardHeader><CardTitle>Reservas próximas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Reservas prÃ³ximas</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {bookings.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas próximas.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas prÃ³ximas.</p>
             ) : (
               bookings.map((booking) => (
                 <div key={booking.id} className="rounded-xl border bg-card p-4 space-y-3">
                   <div className="flex flex-wrap items-start gap-2 justify-between">
                     <div>
                       <p className="font-semibold">{booking.clients?.name || "Cliente"}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{booking.date} · {formatTime(booking.start_time.slice(0, 5))}–{formatTime(booking.end_time.slice(0, 5))}</p>
-                      <p className="text-sm text-muted-foreground">{booking.services?.name} · {booking.barbers?.display_name}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{booking.date} Â· {formatTime(booking.start_time.slice(0, 5))}â{formatTime(booking.end_time.slice(0, 5))}</p>
+                      <p className="text-sm text-muted-foreground">{booking.services?.name} Â· {booking.barbers?.display_name}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status]}`}>{STATUS_LABELS[booking.status]}</span>
@@ -630,7 +630,7 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {/* ── SERVICES ── */}
+      {/* ââ SERVICES ââ */}
       {currentTab === "services" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <Card className="shadow-none">
@@ -667,7 +667,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* ── BARBERS ── */}
+      {/* ââ BARBERS ââ */}
       {currentTab === "barbers" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <Card className="shadow-none">
@@ -711,10 +711,10 @@ export default function DashboardClient({
                         {avgRating !== null ? (
                           <div className="mt-1.5 flex items-center gap-2">
                             <StarDisplay rating={avgRating} />
-                            <span className="text-xs text-muted-foreground font-medium">{avgRating.toFixed(1)} · {barberRatings.length} {barberRatings.length === 1 ? "valoración" : "valoraciones"}</span>
+                            <span className="text-xs text-muted-foreground font-medium">{avgRating.toFixed(1)} Â· {barberRatings.length} {barberRatings.length === 1 ? "valoraciÃ³n" : "valoraciones"}</span>
                           </div>
                         ) : (
-                          <p className="mt-1.5 text-xs text-muted-foreground/60">Sin valoraciones aún</p>
+                          <p className="mt-1.5 text-xs text-muted-foreground/60">Sin valoraciones aÃºn</p>
                         )}
                         <div className="flex flex-wrap gap-3 mt-1.5">
                           <span className="text-xs text-muted-foreground">{barber.barber_services?.length || 0} servicios</span>
@@ -732,7 +732,7 @@ export default function DashboardClient({
                     {/* Valoraciones individuales */}
                     {barberRatings.length > 0 && (
                       <div className="space-y-1.5 border-t pt-3">
-                        <p className="text-xs font-medium text-muted-foreground">Últimas valoraciones</p>
+                        <p className="text-xs font-medium text-muted-foreground">Ãltimas valoraciones</p>
                         {barberRatings.slice(0, 3).map((r) => (
                           <div key={r.id} className="flex items-start gap-2 rounded-lg bg-muted/30 px-3 py-2">
                             <StarDisplay rating={r.rating} />
@@ -740,7 +740,7 @@ export default function DashboardClient({
                             <span className="text-xs text-muted-foreground/50 shrink-0">{new Date(r.created_at).toLocaleDateString()}</span>
                           </div>
                         ))}
-                        {barberRatings.length > 3 && <p className="text-xs text-muted-foreground/60">{barberRatings.length - 3} valoraciones más...</p>}
+                        {barberRatings.length > 3 && <p className="text-xs text-muted-foreground/60">{barberRatings.length - 3} valoraciones mÃ¡s...</p>}
                       </div>
                     )}
                   </div>
@@ -752,7 +752,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* ── CLIENTS ── */}
+      {/* ââ CLIENTS ââ */}
       {currentTab === "clients" && (
         <Card className="shadow-none">
           <CardHeader><CardTitle>Clientes ({clients.length})</CardTitle></CardHeader>
@@ -762,7 +762,7 @@ export default function DashboardClient({
               <Input placeholder="Buscar cliente..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} className="pl-9" />
             </div>
             {clientItems.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">{clientSearch ? "Sin resultados." : "Aún no hay clientes con reservas."}</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{clientSearch ? "Sin resultados." : "AÃºn no hay clientes con reservas."}</p>
             ) : (
               clientItems.map((item, i) => (
                 <div key={i} className="flex items-center gap-3 rounded-xl border p-3">
@@ -778,7 +778,7 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {/* ── SCHEDULE ── */}
+      {/* ââ SCHEDULE ââ */}
       {currentTab === "schedule" && (
         <Card className="shadow-none">
           <CardHeader><CardTitle>Horario de funcionamiento</CardTitle></CardHeader>
@@ -809,7 +809,7 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {/* ── EMAIL ── */}
+      {/* ââ EMAIL ââ */}
       {currentTab === "email" && (
         <div className="space-y-6">
           <Card className="shadow-none">
@@ -819,16 +819,16 @@ export default function DashboardClient({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">Envía recordatorios de reserva por email a tus clientes. Haz clic en el botón <span className="font-medium">Recordatorio</span> en cualquier reserva.</p>
+              <p className="text-sm text-muted-foreground">EnvÃ­a recordatorios de reserva por email a tus clientes. Haz clic en el botÃ³n <span className="font-medium">Recordatorio</span> en cualquier reserva.</p>
               {emailNotifications.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No hay notificaciones de email enviadas aún.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay notificaciones de email enviadas aÃºn.</p>
               ) : (
                 emailNotifications.map((notif) => (
                   <div key={notif.id} className="flex items-center gap-3 rounded-xl border p-3">
                     <div className={`h-2 w-2 shrink-0 rounded-full ${notif.status === "sent" ? "bg-emerald-500" : notif.status === "failed" ? "bg-red-500" : "bg-amber-400"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium capitalize">{notif.type === "reminder" ? "Recordatorio" : notif.type}</p>
-                      {notif.recipient_email && <p className="text-xs text-muted-foreground truncate">{notif.recipient_name ? `${notif.recipient_name} — ` : ""}{notif.recipient_email}</p>}
+                      {notif.recipient_email && <p className="text-xs text-muted-foreground truncate">{notif.recipient_name ? `${notif.recipient_name} â ` : ""}{notif.recipient_email}</p>}
                       {notif.error_message && <p className="text-xs text-destructive">{notif.error_message}</p>}
                     </div>
                     <div className="text-right shrink-0">
@@ -842,16 +842,16 @@ export default function DashboardClient({
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle className="text-base">Enviar recordatorio a reservas próximas</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Enviar recordatorio a reservas prÃ³ximas</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {bookings.filter((b) => b.status === "confirmed").slice(0, 10).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay reservas confirmadas próximas.</p>
+                <p className="text-sm text-muted-foreground">No hay reservas confirmadas prÃ³ximas.</p>
               ) : (
                 bookings.filter((b) => b.status === "confirmed").slice(0, 10).map((booking) => (
                   <div key={booking.id} className="flex items-center gap-3 rounded-xl border p-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{booking.clients?.name || "Cliente"}</p>
-                      <p className="text-xs text-muted-foreground">{booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name}</p>
+                      <p className="text-xs text-muted-foreground">{booking.date} Â· {formatTime(booking.start_time.slice(0, 5))} Â· {booking.services?.name}</p>
                     </div>
                     <Button size="sm" variant="outline" className="h-7 text-xs gap-1 shrink-0" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
                       {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Send className="h-3 w-3" /> Enviar</>}
@@ -864,7 +864,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* ── SETTINGS ── */}
+      {/* ââ SETTINGS ââ */}
       {currentTab === "settings" && (
         <div className="space-y-6 max-w-2xl">
           <Card className="shadow-none overflow-hidden">
@@ -885,28 +885,28 @@ export default function DashboardClient({
             </div>
             <input ref={bannerInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleBannerChange} />
             <CardContent className="pt-3 pb-3">
-              <p className="text-xs text-muted-foreground">Foto de portada · JPG, PNG o WebP · Máx. 5 MB · Recomendado: 1200×400 px</p>
+              <p className="text-xs text-muted-foreground">Foto de portada Â· JPG, PNG o WebP Â· MÃ¡x. 5 MB Â· Recomendado: 1200Ã400 px</p>
             </CardContent>
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle>Información de la barbería</CardTitle></CardHeader>
+            <CardHeader><CardTitle>InformaciÃ³n de la barberÃ­a</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={saveShopInfo} className="space-y-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Nombre</Label>
                   <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm font-medium">{shopState.name}</p>
                 </div>
-                <Field name="address" label="Dirección" defaultValue={shopState.address || ""} placeholder="Calle, número, ciudad" />
+                <Field name="address" label="DirecciÃ³n" defaultValue={shopState.address || ""} placeholder="Calle, nÃºmero, ciudad" />
                 <div className="space-y-1">
                   <Label htmlFor="maps_url" className="text-sm">Embed de Google Maps</Label>
-                  <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="https://www.google.com/maps/embed?pb=..." />
-                  <p className="text-xs text-muted-foreground">Google Maps → tu local → Compartir → Insertar mapa → copia el <code>src</code> del iframe</p>
+                  <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="https://maps.google.com/maps?q=Mi+Barberia+Ciudad" />
+                  <p className="text-xs text-muted-foreground">Google Maps â tu local â Compartir â Insertar mapa â copia el <code>src</code> del iframe</p>
                 </div>
-                <Field name="phone" label="Teléfono" defaultValue={shopState.phone || ""} placeholder="+1 809 000 0000" />
+                <Field name="phone" label="TelÃ©fono" defaultValue={shopState.phone || ""} placeholder="+1 809 000 0000" />
                 <div className="space-y-1">
-                  <Label htmlFor="description">Descripción pública</Label>
-                  <textarea id="description" name="description" defaultValue={shopState.description || ""} placeholder="Breve descripción..." className="min-h-[100px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  <Label htmlFor="description">DescripciÃ³n pÃºblica</Label>
+                  <textarea id="description" name="description" defaultValue={shopState.description || ""} placeholder="Breve descripciÃ³n..." className="min-h-[100px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <Button type="submit" disabled={savingSettings}>
                   {savingSettings ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : "Guardar cambios"}
@@ -918,9 +918,9 @@ export default function DashboardClient({
           <Card className="shadow-none">
             <CardHeader><CardTitle>Detalles de la cuenta</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <InfoRow label="URL pública" value={`ibarber.app/${shopState.slug}`} />
+              <InfoRow label="URL pÃºblica" value={`ibarber.app/${shopState.slug}`} />
               <InfoRow label="Ciudad" value={shopState.city ? `${shopState.city}, ${shopState.country_name}` : "No especificada"} />
-              <InfoRow label="Pagos online" value={shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"} />
+              <InfoRow label="Pagos online" value={shopState.payments_enabled ? `SÃ­ Â· modo ${shopState.online_payment_mode}` : "No activados"} />
             </CardContent>
           </Card>
         </div>
@@ -931,7 +931,7 @@ export default function DashboardClient({
   );
 }
 
-// ── SUB-COMPONENTS ─────────────────────────────
+// ââ SUB-COMPONENTS âââââââââââââââââââââââââââââ
 
 function KpiCard({ label, value, sub, icon: Icon, color }: { label: string; value: number | string; sub: string; icon: typeof Clock; color: "teal" | "gold" }) {
   return (
@@ -1003,13 +1003,13 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (e: FormEvent<HTMLFormEleme
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
           <Field name="name" label="Nombre" required placeholder="Corte de cabello" />
-          <Field name="category" label="Categoría" placeholder="Corte, Barba, Combo..." />
+          <Field name="category" label="CategorÃ­a" placeholder="Corte, Barba, Combo..." />
           <div className="grid grid-cols-2 gap-3">
-            <Field name="duration_min" label="Duración (min)" type="number" defaultValue="30" required />
+            <Field name="duration_min" label="DuraciÃ³n (min)" type="number" defaultValue="30" required />
             <Field name="price" label="Precio" type="number" defaultValue="500" required />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="description">DescripciÃ³n</Label>
             <textarea id="description" name="description" placeholder="Opcional..." className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
           <Button type="submit" className="w-full">Crear servicio</Button>
@@ -1025,11 +1025,11 @@ function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmi
       <CardHeader><CardTitle className="text-base">Nuevo barbero</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
-          <Field name="display_name" label="Nombre público" required placeholder="Ej: Miguel" />
-          <Field name="specialty" label="Especialidad" placeholder="Ej: Cortes clásicos" />
+          <Field name="display_name" label="Nombre pÃºblico" required placeholder="Ej: Miguel" />
+          <Field name="specialty" label="Especialidad" placeholder="Ej: Cortes clÃ¡sicos" />
           <div className="space-y-1">
             <Label htmlFor="bio">Bio</Label>
-            <textarea id="bio" name="bio" placeholder="Breve descripción..." className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <textarea id="bio" name="bio" placeholder="Breve descripciÃ³n..." className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
           {services.length > 0 && (
             <div className="space-y-2">
