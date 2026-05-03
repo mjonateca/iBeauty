@@ -161,7 +161,7 @@ export async function POST(request: Request) {
     });
 
     const result = await resend.emails.send({
-      from: `${(context.shop as unknown as { name: string; slug: string }).name} <onboarding@resend.dev>`,
+      from: `${(context.shop as unknown as { name: string; slug: string }).name} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,
       to: recipientEmail,
       subject,
       html,
