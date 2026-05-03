@@ -69,3 +69,36 @@ export function normalizeMapsUrl(value: string | null | undefined): string | nul
 
   return candidate;
 }
+
+export function buildMapsEmbedUrl(
+  value: string | null | undefined,
+  fallbackQuery?: string | null
+): string | null {
+  const normalized = normalizeMapsUrl(value);
+
+  if (normalized) {
+    try {
+      const url = new URL(normalized);
+      if (url.pathname.includes("/maps/embed") || url.pathname.includes("/embed")) {
+        return url.toString();
+      }
+
+      const query = url.searchParams.get("q") || url.searchParams.get("query");
+      if (query) {
+        return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=es`;
+      }
+
+      const coords = normalized.match(/@([-\d.]+),([-\d.]+)/);
+      if (coords) {
+        return `https://www.google.com/maps?q=${coords[1]},${coords[2]}&output=embed&hl=es`;
+      }
+    } catch {
+      return fallbackQuery
+        ? `https://www.google.com/maps?q=${encodeURIComponent(fallbackQuery)}&output=embed&hl=es`
+        : null;
+    }
+  }
+
+  if (!fallbackQuery) return null;
+  return `https://www.google.com/maps?q=${encodeURIComponent(fallbackQuery)}&output=embed&hl=es`;
+}

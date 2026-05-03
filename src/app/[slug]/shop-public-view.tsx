@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Star, Clock, Scissors, Home, ExternalLink } from "lucide-react";
-import { formatCurrency, normalizeMapsUrl } from "@/lib/utils";
+import { buildMapsEmbedUrl, formatCurrency, normalizeMapsUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AccountRole, Shop, Barber, Service } from "@/types/database";
@@ -38,19 +38,8 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
     return activeServices.filter((s) => serviceIds.has(s.id));
   }
 
-  const mapsEmbedSrc = (() => {
-    const url = normalizeMapsUrl(shop.maps_url);
-    if (!url) return null;
-    if (url.includes("/embed")) return url;
-    try {
-      const u = new URL(url);
-      const q = u.searchParams.get("q");
-      if (q) return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed&hl=es`;
-      const match = url.match(/@([-\d.]+),([-\d.]+)/);
-      if (match) return `https://www.google.com/maps?q=${match[1]},${match[2]}&output=embed&hl=es`;
-    } catch {}
-    return url.includes("?") ? `${url}&output=embed` : `${url}?output=embed`;
-  })();
+  const locationQuery = [shop.address, shop.city, shop.country_name].filter(Boolean).join(", ");
+  const mapsEmbedSrc = buildMapsEmbedUrl(shop.maps_url, locationQuery || null);
   const mapsExternalUrl = normalizeMapsUrl(shop.maps_url) || null;
 
   return (
