@@ -98,7 +98,7 @@ export const demoBookings: (Booking & {
   services: { name: string; duration_min: number; price: number } | null;
 })[] = [
   {
-    id: "bk-1", client_id: "demo-client-1", barber_id: "demo-barber-1",
+    id: "bk-1", client_id: "demo-client-1", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-1",
     shop_id: "demo-shop-1", service_id: "svc-1",
     date: today, start_time: "09:00:00", end_time: "09:30:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
@@ -109,7 +109,7 @@ export const demoBookings: (Booking & {
     services: { name: "Corte de cabello", duration_min: 30, price: 350 },
   },
   {
-    id: "bk-2", client_id: "demo-client-2", barber_id: "demo-barber-2",
+    id: "bk-2", client_id: "demo-client-2", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-2",
     shop_id: "demo-shop-1", service_id: "svc-2",
     date: today, start_time: "10:00:00", end_time: "10:45:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
@@ -120,7 +120,7 @@ export const demoBookings: (Booking & {
     services: { name: "Corte + barba", duration_min: 45, price: 550 },
   },
   {
-    id: "bk-3", client_id: "demo-client-3", barber_id: "demo-barber-1",
+    id: "bk-3", client_id: "demo-client-3", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-1",
     shop_id: "demo-shop-1", service_id: "svc-3",
     date: today, start_time: "11:30:00", end_time: "11:50:00",
     status: "completed", deposit_status: "none", deposit_amount: 0,
@@ -131,7 +131,7 @@ export const demoBookings: (Booking & {
     services: { name: "Barba", duration_min: 20, price: 300 },
   },
   {
-    id: "bk-4", client_id: "demo-client-4", barber_id: "demo-barber-2",
+    id: "bk-4", client_id: "demo-client-4", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-2",
     shop_id: "demo-shop-1", service_id: "svc-4",
     date: today, start_time: "14:00:00", end_time: "14:25:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
