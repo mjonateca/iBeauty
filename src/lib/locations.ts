@@ -43,3 +43,8 @@ export function getCurrencyForCountry(code: string): { currency: string; symbol:
 export function getCitiesForCountry(code: string): string[] {
   return getCountryByCode(code)?.cities ?? [];
 }
+
+
+export function getCountryName(code: string): string {
+  return getCountryByCode(code)?.name ?? code;
+}
