@@ -40,6 +40,8 @@ export interface Shop {
   lat: number | null;
   lng: number | null;
   maps_url: string | null;
+  currency: string;
+  currency_symbol: string;
   phone: string | null;
   whatsapp: string | null;
   country_code: string | null;
@@ -93,7 +95,10 @@ export interface BarberService {
 
 export interface Booking {
   id: string;
-  client_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_phone: string | null;
+  notes: string | null;
   barber_id: string;
   shop_id: string;
   service_id: string;
