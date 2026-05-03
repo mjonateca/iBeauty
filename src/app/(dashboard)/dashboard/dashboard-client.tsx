@@ -47,6 +47,9 @@ import type {
 export interface BookingWithRelations {
   id: string;
   client_id?: string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+  notes?: string | null;
   date?: string;
   start_time: string;
   end_time: string;
@@ -113,7 +116,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   confirmed: "Confirmada",
   rescheduled: "Reprogramada",
   completed: "Completada",
-  no_show: "No se presentÃÂÃÂ³",
+  no_show: "No se presentó",
   cancelled: "Cancelada",
 };
 
@@ -144,10 +147,10 @@ const SUBSCRIPTION_LABELS: Record<SubscriptionStatus, string> = {
 const WEEK_DAYS = [
   { key: "lunes", label: "Lunes" },
   { key: "martes", label: "Martes" },
-  { key: "miercoles", label: "MiÃÂÃÂ©rcoles" },
+  { key: "miercoles", label: "Miércoles" },
   { key: "jueves", label: "Jueves" },
   { key: "viernes", label: "Viernes" },
-  { key: "sabado", label: "SÃÂÃÂ¡bado" },
+  { key: "sabado", label: "Sábado" },
   { key: "domingo", label: "Domingo" },
 ] as const;
 
@@ -180,6 +183,14 @@ function normalizeOpeningHours(value: Shop["opening_hours"]): OpeningHoursValue 
     }
   }
   return normalized;
+}
+
+function addMinutesToTime(value: string, minutesToAdd: number) {
+  const [hours, minutes] = value.split(":").map(Number);
+  const totalMinutes = (hours * 60) + minutes + minutesToAdd;
+  const nextHours = Math.floor(totalMinutes / 60);
+  const nextMinutes = totalMinutes % 60;
+  return `${nextHours.toString().padStart(2, "0")}:${nextMinutes.toString().padStart(2, "0")}:00`;
 }
 
 function subscriptionTone(status?: SubscriptionStatus | null) {
@@ -234,6 +245,7 @@ export default function DashboardClient({
   const [uploadingBarberPhoto, setUploadingBarberPhoto] = useState<string | null>(null);
   const [emailNotifications, setEmailNotifications] = useState(initialEmailNotifications);
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [creatingManualBooking, setCreatingManualBooking] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -243,7 +255,7 @@ export default function DashboardClient({
         .filter((c) => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
         .map((client) => ({
           title: client.name,
-          detail: `${client.phone || client.whatsapp || "Sin telÃÂÃÂ©fono"}${client.city ? ` ÃÂÃÂ· ${client.city}` : ""}`,
+          detail: `${client.phone || client.whatsapp || "Sin teléfono"}${client.city ? ` · ${client.city}` : ""}`,
         })),
     [clients, clientSearch]
   );
@@ -251,6 +263,27 @@ export default function DashboardClient({
   const todayTimeline = useMemo(
     () => [...todayBookings].sort((a, b) => a.start_time.localeCompare(b.start_time)),
     [todayBookings]
+  );
+
+  const activeBarbers = useMemo(
+    () => barbers.filter((barber) => barber.is_active !== false),
+    [barbers]
+  );
+
+  const activeServices = useMemo(
+    () => services.filter((service) => service.is_active),
+    [services]
+  );
+
+  const todayDateInput = useMemo(
+    () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    },
+    []
   );
 
   // Ratings grouped by barber_id
@@ -276,7 +309,7 @@ export default function DashboardClient({
     });
     const payload = await response.json().catch(() => ({ error: "Error inesperado" }));
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se actualizÃÂÃÂ³ la reserva", description: payload.error });
+      toast({ variant: "destructive", title: "No se actualizó la reserva", description: payload.error });
     } else {
       setBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status } : b)));
       toast({ title: STATUS_LABELS[status] });
@@ -300,7 +333,7 @@ export default function DashboardClient({
       }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { toast({ variant: "destructive", title: "No se creÃÂÃÂ³ el servicio", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el servicio", description: payload.error }); return; }
     setServices((prev) => [...prev, payload]);
     event.currentTarget.reset();
     toast({ title: "Servicio creado" });
@@ -321,13 +354,13 @@ export default function DashboardClient({
   }
 
   async function deleteService(service: Service) {
-    if (!window.confirm(`ÃÂÃÂ¿Eliminar "${service.name}"? Esta acciÃÂÃÂ³n no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Eliminar "${service.name}"? Esta acción no se puede deshacer.`)) return;
     setDeletingServiceId(service.id);
     const response = await fetch(`/api/dashboard/services/${service.id}`, { method: "DELETE" });
     setDeletingServiceId(null);
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      toast({ variant: "destructive", title: "No se eliminÃÂÃÂ³ el servicio", description: payload.error });
+      toast({ variant: "destructive", title: "No se eliminó el servicio", description: payload.error });
       return;
     }
     setServices((prev) => prev.filter((s) => s.id !== service.id));
@@ -344,7 +377,7 @@ export default function DashboardClient({
       body: JSON.stringify({ shop_id: shopState.id, display_name: form.get("display_name"), specialty: form.get("specialty"), bio: form.get("bio"), service_ids: serviceIds }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { toast({ variant: "destructive", title: "No se creÃÂÃÂ³ el barbero", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el barbero", description: payload.error }); return; }
     setBarbers((prev) => [...prev, { ...payload, barber_services: serviceIds.map((id) => ({ service_id: id })) }]);
     event.currentTarget.reset();
     toast({ title: "Barbero creado" });
@@ -365,7 +398,7 @@ export default function DashboardClient({
   }
 
   async function uploadBarberPhoto(barberId: string, file: File) {
-    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "MÃÂÃÂ¡x. 5 MB" }); return; }
+    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "Máx. 5 MB" }); return; }
     setUploadingBarberPhoto(barberId);
     const formData = new FormData();
     formData.append("file", file);
@@ -382,14 +415,14 @@ export default function DashboardClient({
     setSavingSchedule(true);
     const invalidDay = WEEK_DAYS.find(({ key }) => { const day = openingHours[key]; return !day.closed && day.open >= day.close; });
     if (invalidDay) {
-      toast({ variant: "destructive", title: "Horario invÃÂÃÂ¡lido", description: `Revisa ${invalidDay.label}` });
+      toast({ variant: "destructive", title: "Horario inválido", description: `Revisa ${invalidDay.label}` });
       setSavingSchedule(false);
       return;
     }
     const response = await fetch("/api/dashboard/shop", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opening_hours: openingHours }) });
     const payload = await response.json().catch(() => ({}));
     setSavingSchedule(false);
-    if (!response.ok) { toast({ variant: "destructive", title: "No se guardÃÂÃÂ³ el horario", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se guardó el horario", description: payload.error }); return; }
     setShopState(payload);
     toast({ title: "Horario actualizado" });
   }
@@ -413,7 +446,7 @@ export default function DashboardClient({
   async function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "MÃÂÃÂ¡x. 5 MB" }); return; }
+    if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "Máx. 5 MB" }); return; }
     setBannerPreview(URL.createObjectURL(file));
     setUploadingBanner(true);
     const formData = new FormData();
@@ -446,6 +479,72 @@ export default function DashboardClient({
     toast({ title: payload.recipientEmail ? `Recordatorio enviado a ${payload.recipientEmail}` : "Sin email registrado para este cliente" });
   }
 
+  async function createManualBooking(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const barberId = String(form.get("barber_id") || "");
+    const serviceId = String(form.get("service_id") || "");
+    const date = String(form.get("date") || "");
+    const startTime = String(form.get("start_time") || "");
+    const clientName = String(form.get("client_name") || "").trim();
+    const clientPhone = String(form.get("client_phone") || "").trim();
+    const notes = String(form.get("notes") || "").trim();
+
+    const selectedService = services.find((service) => service.id === serviceId);
+    if (!selectedService) {
+      toast({ variant: "destructive", title: "Servicio inválido" });
+      return;
+    }
+
+    if (!barberId || !date || !startTime || !clientName) {
+      toast({ variant: "destructive", title: "Faltan datos", description: "Completa cliente, barbero, servicio, fecha y hora." });
+      return;
+    }
+
+    setCreatingManualBooking(true);
+    const response = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        manual: true,
+        shop_id: shopState.id,
+        barber_id: barberId,
+        service_id: serviceId,
+        date,
+        start_time: startTime,
+        end_time: addMinutesToTime(startTime, selectedService.duration_min),
+        client_name: clientName,
+        client_phone: clientPhone || null,
+        notes: notes || null,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setCreatingManualBooking(false);
+
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se pudo crear la reserva", description: payload.error });
+      return;
+    }
+
+    setBookings((prev) =>
+      [...prev, {
+        ...payload,
+        clients: null,
+        barbers: activeBarbers.find((barber) => barber.id === barberId)
+          ? { display_name: activeBarbers.find((barber) => barber.id === barberId)!.display_name }
+          : null,
+        services: {
+          name: selectedService.name,
+          duration_min: selectedService.duration_min,
+          price: selectedService.price,
+        },
+      }].sort((a, b) => `${a.date || ""}${a.start_time}`.localeCompare(`${b.date || ""}${b.start_time}`))
+    );
+
+    (event.currentTarget as HTMLFormElement).reset();
+    toast({ title: "Reserva manual creada" });
+  }
+
   async function openBillingCheckout() {
     setBillingAction("checkout");
     const response = await fetch("/api/billing/checkout", { method: "POST" });
@@ -470,20 +569,20 @@ export default function DashboardClient({
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{shopState.name}</h1>
-          <p className="text-sm text-muted-foreground capitalize">{shopState.city ? `${shopState.city} ÃÂÃÂ· ` : ""}{todayStr}</p>
+          <p className="text-sm text-muted-foreground capitalize">{shopState.city ? `${shopState.city} · ` : ""}{todayStr}</p>
           {subscription && (
             <span className={`mt-1.5 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${subscriptionTone(subscription.status)}`}>
               {SUBSCRIPTION_LABELS[subscription.status]}
-              {subscription.trial_ends_at ? ` ÃÂÃÂ· hasta ${new Date(subscription.trial_ends_at).toLocaleDateString()}` : ""}
+              {subscription.trial_ends_at ? ` · hasta ${new Date(subscription.trial_ends_at).toLocaleDateString()}` : ""}
             </span>
           )}
         </div>
         <Link href={`/${shopState.slug}`} target="_blank" className="inline-flex items-center gap-1.5 self-start rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors">
-          Ver pÃÂÃÂ¡gina pÃÂÃÂºblica <ExternalLink className="h-3.5 w-3.5" />
+          Ver página pública <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ SUMMARY ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── SUMMARY ── */}
       {currentTab === "summary" && (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -525,7 +624,7 @@ export default function DashboardClient({
                       <div className="h-full w-px bg-border" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{booking.clients?.name || "Cliente"}</p>
-                        <p className="text-xs text-muted-foreground truncate">{booking.services?.name} ÃÂÃÂ· {booking.barbers?.display_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{booking.services?.name} · {booking.barbers?.display_name}</p>
                       </div>
                       <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status]}`}>{STATUS_LABELS[booking.status]}</span>
                       {booking.payment_amount > 0 && <span className="shrink-0 text-sm font-semibold text-primary">{formatCurrency(booking.payment_amount, booking.payment_currency)}</span>}
@@ -537,21 +636,21 @@ export default function DashboardClient({
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BarChart title="Servicios mÃÂÃÂ¡s solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavÃÂÃÂ­a." />
-            <BarChart title="Barberos con mÃÂÃÂ¡s reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavÃÂÃÂ­a." />
-            <BarChart title="Franjas con mÃÂÃÂ¡s demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavÃÂÃÂ­a." />
-            <BarChart title="DÃÂÃÂ­as con mÃÂÃÂ¡s demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavÃÂÃÂ­a." />
+            <BarChart title="Servicios más solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavía." />
+            <BarChart title="Barberos con más reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavía." />
+            <BarChart title="Franjas con más demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
+            <BarChart title="Días con más demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
           </div>
 
           {analytics.evolutions.month.length > 0 && (
             <Card className="shadow-none">
-              <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> EvoluciÃÂÃÂ³n mensual</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Evolución mensual</CardTitle></CardHeader>
               <CardContent><MiniLineChart data={analytics.evolutions.month.slice(-6)} /></CardContent>
             </Card>
           )}
 
           <Card className="shadow-none">
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="h-4 w-4 text-primary" /> SuscripciÃÂÃÂ³n</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="h-4 w-4 text-primary" /> Suscripción</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {subscription ? (
                 <>
@@ -560,19 +659,19 @@ export default function DashboardClient({
                       <p className="font-medium">{SUBSCRIPTION_LABELS[subscription.status]}</p>
                       <p className="font-bold text-primary">{formatCurrency(subscription.monthly_price, subscription.currency)}/mes</p>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">PrÃÂÃÂ³ximo corte: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Próximo corte: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}</p>
                     {subscription.last_payment_error && <p className="mt-2 rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{subscription.last_payment_error}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button onClick={openBillingCheckout}>{billingAction === "checkout" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Activar / renovar plan"}</Button>
-                    <Button variant="outline" onClick={openBillingPortal}>{billingAction === "portal" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gestionar mÃÂÃÂ©todo de pago"}</Button>
+                    <Button variant="outline" onClick={openBillingPortal}>{billingAction === "portal" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gestionar método de pago"}</Button>
                   </div>
                   {paymentMethods.length > 0 && (
                     <div className="space-y-2">
                       {paymentMethods.map((pm) => (
                         <div key={pm.id} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
                           <CreditCard className="h-4 w-4 text-muted-foreground" />
-                          <span>{pm.brand?.toUpperCase() || "Tarjeta"} ÃÂÃÂ·ÃÂÃÂ·ÃÂÃÂ·ÃÂÃÂ· {pm.last4 || "****"}</span>
+                          <span>{pm.brand?.toUpperCase() || "Tarjeta"} ···· {pm.last4 || "****"}</span>
                           {pm.is_default && <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Predeterminada</span>}
                         </div>
                       ))}
@@ -580,53 +679,104 @@ export default function DashboardClient({
                   )}
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">La suscripciÃÂÃÂ³n se estÃÂÃÂ¡ preparando.</p>
+                <p className="text-sm text-muted-foreground">La suscripción se está preparando.</p>
               )}
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ BOOKINGS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── BOOKINGS ── */}
       {currentTab === "bookings" && (
-        <Card className="shadow-none">
-          <CardHeader><CardTitle>Reservas prÃÂÃÂ³ximas</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {bookings.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas prÃÂÃÂ³ximas.</p>
-            ) : (
-              bookings.map((booking) => (
-                <div key={booking.id} className="rounded-xl border bg-card p-4 space-y-3">
-                  <div className="flex flex-wrap items-start gap-2 justify-between">
-                    <div>
-                      <p className="font-semibold">{booking.clients?.name || "Cliente"}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{booking.date} ÃÂÃÂ· {formatTime(booking.start_time.slice(0, 5))}ÃÂ¢ÃÂÃÂ{formatTime(booking.end_time.slice(0, 5))}</p>
-                      <p className="text-sm text-muted-foreground">{booking.services?.name} ÃÂÃÂ· {booking.barbers?.display_name}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status]}`}>{STATUS_LABELS[booking.status]}</span>
-                      {booking.payment_amount > 0 && <span className="text-sm font-bold text-primary">{formatCurrency(booking.payment_amount, booking.payment_currency)}</span>}
-                      <span className="text-xs text-muted-foreground">{PAYMENT_STATUS_LABELS[booking.payment_status]}</span>
-                    </div>
+        <div className="space-y-6">
+          <Card className="shadow-none">
+            <CardHeader>
+              <CardTitle>Crear reserva manual</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={createManualBooking} className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field name="client_name" label="Nombre del cliente" placeholder="Ej: Carlos Peña" required />
+                  <Field name="client_phone" label="Teléfono del cliente" placeholder="+1 809 000 0000" />
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="barber_id">Barbero</Label>
+                    <select id="barber_id" name="barber_id" required className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">Selecciona un barbero</option>
+                      {activeBarbers.map((barber) => (
+                        <option key={barber.id} value={barber.id}>{barber.display_name}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="flex flex-wrap gap-2 border-t pt-3">
-                    {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
-                      <Button key={status} size="sm" variant={booking.status === status ? "default" : "outline"} disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)} className="text-xs h-7">
-                        {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
-                      </Button>
-                    ))}
-                    <Button size="sm" variant="outline" className="ml-auto h-7 text-xs gap-1" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
-                      {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Mail className="h-3 w-3" /> Recordatorio</>}
-                    </Button>
+                  <div className="space-y-1">
+                    <Label htmlFor="service_id">Servicio</Label>
+                    <select id="service_id" name="service_id" required className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">Selecciona un servicio</option>
+                      {activeServices.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name} · {service.duration_min} min
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field name="date" label="Fecha" type="date" required min={todayDateInput} />
+                  <Field name="start_time" label="Hora de inicio" type="time" required />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="notes">Notas</Label>
+                  <textarea id="notes" name="notes" placeholder="Observaciones internas de la reserva..." className="min-h-[90px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <Button type="submit" disabled={creatingManualBooking || activeBarbers.length === 0 || activeServices.length === 0}>
+                  {creatingManualBooking ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</> : "Crear reserva manual"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle>Reservas próximas</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {bookings.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas próximas.</p>
+              ) : (
+                bookings.map((booking) => (
+                  <div key={booking.id} className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex flex-wrap items-start gap-2 justify-between">
+                      <div>
+                        <p className="font-semibold">{booking.clients?.name || booking.client_name || "Cliente"}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">{booking.date} · {formatTime(booking.start_time.slice(0, 5))}–{formatTime(booking.end_time.slice(0, 5))}</p>
+                        <p className="text-sm text-muted-foreground">{booking.services?.name} · {booking.barbers?.display_name}</p>
+                        {booking.client_phone && <p className="text-xs text-muted-foreground mt-1">{booking.client_phone}</p>}
+                        {booking.notes && <p className="text-xs text-muted-foreground mt-1">{booking.notes}</p>}
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status]}`}>{STATUS_LABELS[booking.status]}</span>
+                        {booking.payment_amount > 0 && <span className="text-sm font-bold text-primary">{formatCurrency(booking.payment_amount, booking.payment_currency)}</span>}
+                        <span className="text-xs text-muted-foreground">{PAYMENT_STATUS_LABELS[booking.payment_status]}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 border-t pt-3">
+                      {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
+                        <Button key={status} size="sm" variant={booking.status === status ? "default" : "outline"} disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)} className="text-xs h-7">
+                          {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
+                        </Button>
+                      ))}
+                      <Button size="sm" variant="outline" className="ml-auto h-7 text-xs gap-1" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
+                        {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Mail className="h-3 w-3" /> Recordatorio</>}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ SERVICES ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── SERVICES ── */}
       {currentTab === "services" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <Card className="shadow-none">
@@ -663,7 +813,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ BARBERS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── BARBERS ── */}
       {currentTab === "barbers" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <Card className="shadow-none">
@@ -707,10 +857,10 @@ export default function DashboardClient({
                         {avgRating !== null ? (
                           <div className="mt-1.5 flex items-center gap-2">
                             <StarDisplay rating={avgRating} />
-                            <span className="text-xs text-muted-foreground font-medium">{avgRating.toFixed(1)} ÃÂÃÂ· {barberRatings.length} {barberRatings.length === 1 ? "valoraciÃÂÃÂ³n" : "valoraciones"}</span>
+                            <span className="text-xs text-muted-foreground font-medium">{avgRating.toFixed(1)} · {barberRatings.length} {barberRatings.length === 1 ? "valoración" : "valoraciones"}</span>
                           </div>
                         ) : (
-                          <p className="mt-1.5 text-xs text-muted-foreground/60">Sin valoraciones aÃÂÃÂºn</p>
+                          <p className="mt-1.5 text-xs text-muted-foreground/60">Sin valoraciones aún</p>
                         )}
                         <div className="flex flex-wrap gap-3 mt-1.5">
                           <span className="text-xs text-muted-foreground">{barber.barber_services?.length || 0} servicios</span>
@@ -728,7 +878,7 @@ export default function DashboardClient({
                     {/* Valoraciones individuales */}
                     {barberRatings.length > 0 && (
                       <div className="space-y-1.5 border-t pt-3">
-                        <p className="text-xs font-medium text-muted-foreground">ÃÂÃÂltimas valoraciones</p>
+                        <p className="text-xs font-medium text-muted-foreground">Últimas valoraciones</p>
                         {barberRatings.slice(0, 3).map((r) => (
                           <div key={r.id} className="flex items-start gap-2 rounded-lg bg-muted/30 px-3 py-2">
                             <StarDisplay rating={r.rating} />
@@ -736,7 +886,7 @@ export default function DashboardClient({
                             <span className="text-xs text-muted-foreground/50 shrink-0">{new Date(r.created_at).toLocaleDateString()}</span>
                           </div>
                         ))}
-                        {barberRatings.length > 3 && <p className="text-xs text-muted-foreground/60">{barberRatings.length - 3} valoraciones mÃÂÃÂ¡s...</p>}
+                        {barberRatings.length > 3 && <p className="text-xs text-muted-foreground/60">{barberRatings.length - 3} valoraciones más...</p>}
                       </div>
                     )}
                   </div>
@@ -748,7 +898,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ CLIENTS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── CLIENTS ── */}
       {currentTab === "clients" && (
         <Card className="shadow-none">
           <CardHeader><CardTitle>Clientes ({clients.length})</CardTitle></CardHeader>
@@ -758,7 +908,7 @@ export default function DashboardClient({
               <Input placeholder="Buscar cliente..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} className="pl-9" />
             </div>
             {clientItems.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">{clientSearch ? "Sin resultados." : "AÃÂÃÂºn no hay clientes con reservas."}</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{clientSearch ? "Sin resultados." : "Aún no hay clientes con reservas."}</p>
             ) : (
               clientItems.map((item, i) => (
                 <div key={i} className="flex items-center gap-3 rounded-xl border p-3">
@@ -774,7 +924,7 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ SCHEDULE ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── SCHEDULE ── */}
       {currentTab === "schedule" && (
         <Card className="shadow-none">
           <CardHeader><CardTitle>Horario de funcionamiento</CardTitle></CardHeader>
@@ -805,7 +955,7 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ EMAIL ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── EMAIL ── */}
       {currentTab === "email" && (
         <div className="space-y-6">
           <Card className="shadow-none">
@@ -815,17 +965,16 @@ export default function DashboardClient({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">EnvÃÂÃÂ­a recordatorios de reserva por email a tus clientes. Haz clic en el botÃÂÃÂ³n <span className="font-medium">Recordatorio</span> en cualquier reserva.</p>
+              <p className="text-sm text-muted-foreground">Envía recordatorios de reserva por email a tus clientes. Haz clic en el botón <span className="font-medium">Recordatorio</span> en cualquier reserva.</p>
               {emailNotifications.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No hay notificaciones de email enviadas aÃÂÃÂºn.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay notificaciones de email enviadas aún.</p>
               ) : (
                 emailNotifications.map((notif) => (
                   <div key={notif.id} className="flex items-center gap-3 rounded-xl border p-3">
                     <div className={`h-2 w-2 shrink-0 rounded-full ${notif.status === "sent" ? "bg-emerald-500" : notif.status === "failed" ? "bg-red-500" : "bg-amber-400"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium capitalize">{notif.type === "reminder" ? "Recordatorio" : notif.type}</p>
-                      {notif.recipient_email && <p className="text-xs text-muted-foreground truncate">{notif.recipient_name ? `${notif.recipient_name} ÃÂ¢ÃÂÃÂ ` : ""}{notif.recipient_email}</p>}
-                      {notif.error_message && <p className="text-xs text-destructive">{notif.error_message}</p>}
+                      {notif.recipient_email && <p className="text-xs text-muted-foreground truncate">{notif.recipient_name ? `${notif.recipient_name} — ` : ""}{notif.recipient_email}</p>}
                     </div>
                     <div className="text-right shrink-0">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${notif.status === "sent" ? "bg-emerald-100 text-emerald-700" : notif.status === "failed" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{notif.status === "sent" ? "Enviado" : notif.status === "failed" ? "Error" : "Pendiente"}</span>
@@ -838,16 +987,16 @@ export default function DashboardClient({
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle className="text-base">Enviar recordatorio a reservas prÃÂÃÂ³ximas</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Enviar recordatorio a reservas próximas</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {bookings.filter((b) => b.status === "confirmed").slice(0, 10).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay reservas confirmadas prÃÂÃÂ³ximas.</p>
+                <p className="text-sm text-muted-foreground">No hay reservas confirmadas próximas.</p>
               ) : (
                 bookings.filter((b) => b.status === "confirmed").slice(0, 10).map((booking) => (
                   <div key={booking.id} className="flex items-center gap-3 rounded-xl border p-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{booking.clients?.name || "Cliente"}</p>
-                      <p className="text-xs text-muted-foreground">{booking.date} ÃÂÃÂ· {formatTime(booking.start_time.slice(0, 5))} ÃÂÃÂ· {booking.services?.name}</p>
+                      <p className="text-xs text-muted-foreground">{booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name}</p>
                     </div>
                     <Button size="sm" variant="outline" className="h-7 text-xs gap-1 shrink-0" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
                       {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Send className="h-3 w-3" /> Enviar</>}
@@ -860,7 +1009,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ SETTINGS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ── SETTINGS ── */}
       {currentTab === "settings" && (
         <div className="space-y-6 max-w-2xl">
           <Card className="shadow-none overflow-hidden">
@@ -881,28 +1030,28 @@ export default function DashboardClient({
             </div>
             <input ref={bannerInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleBannerChange} />
             <CardContent className="pt-3 pb-3">
-              <p className="text-xs text-muted-foreground">Foto de portada ÃÂÃÂ· JPG, PNG o WebP ÃÂÃÂ· MÃÂÃÂ¡x. 5 MB ÃÂÃÂ· Recomendado: 1200ÃÂÃÂ400 px</p>
+              <p className="text-xs text-muted-foreground">Foto de portada · JPG, PNG o WebP · Máx. 5 MB · Recomendado: 1200×400 px</p>
             </CardContent>
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle>InformaciÃÂÃÂ³n de la barberÃÂÃÂ­a</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Información de la barbería</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={saveShopInfo} className="space-y-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Nombre</Label>
                   <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm font-medium">{shopState.name}</p>
                 </div>
-                <Field name="address" label="DirecciÃÂÃÂ³n" defaultValue={shopState.address || ""} placeholder="Calle, nÃÂÃÂºmero, ciudad" />
+                <Field name="address" label="Dirección" defaultValue={shopState.address || ""} placeholder="Calle, número, ciudad" />
                 <div className="space-y-1">
-                  <Label htmlFor="maps_url" className="text-sm">Embed de Google Maps</Label>
-                  <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="https://maps.google.com/maps?q=Mi+Barberia+Ciudad" />
-                  <p className="text-xs text-muted-foreground">Google Maps ÃÂ¢ÃÂÃÂ tu local ÃÂ¢ÃÂÃÂ Compartir ÃÂ¢ÃÂÃÂ Insertar mapa ÃÂ¢ÃÂÃÂ copia el <code>src</code> del iframe</p>
+                  <Label htmlFor="maps_url" className="text-sm">Enlace o iframe de Google Maps</Label>
+                  <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="Pega la URL o el src del iframe de Google Maps" />
+                  <p className="text-xs text-muted-foreground">Puedes pegar la URL normal, el enlace compartido o el <code>src</code> del iframe. iBarber lo normaliza al guardar.</p>
                 </div>
-                <Field name="phone" label="TelÃÂÃÂ©fono" defaultValue={shopState.phone || ""} placeholder="+1 809 000 0000" />
+                <Field name="phone" label="Teléfono" defaultValue={shopState.phone || ""} placeholder="+1 809 000 0000" />
                 <div className="space-y-1">
-                  <Label htmlFor="description">DescripciÃÂÃÂ³n pÃÂÃÂºblica</Label>
-                  <textarea id="description" name="description" defaultValue={shopState.description || ""} placeholder="Breve descripciÃÂÃÂ³n..." className="min-h-[100px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  <Label htmlFor="description">Descripción pública</Label>
+                  <textarea id="description" name="description" defaultValue={shopState.description || ""} placeholder="Breve descripción..." className="min-h-[100px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <Button type="submit" disabled={savingSettings}>
                   {savingSettings ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : "Guardar cambios"}
@@ -914,9 +1063,9 @@ export default function DashboardClient({
           <Card className="shadow-none">
             <CardHeader><CardTitle>Detalles de la cuenta</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <InfoRow label="URL pÃÂÃÂºblica" value={`ibarber.app/${shopState.slug}`} />
+              <InfoRow label="URL pública" value={`ibarber.app/${shopState.slug}`} />
               <InfoRow label="Ciudad" value={shopState.city ? `${shopState.city}, ${shopState.country_name}` : "No especificada"} />
-              <InfoRow label="Pagos online" value={shopState.payments_enabled ? `SÃÂÃÂ­ ÃÂÃÂ· modo ${shopState.online_payment_mode}` : "No activados"} />
+              <InfoRow label="Pagos online" value={shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"} />
             </CardContent>
           </Card>
         </div>
@@ -927,7 +1076,7 @@ export default function DashboardClient({
   );
 }
 
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ SUB-COMPONENTS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// ── SUB-COMPONENTS ─────────────────────────────
 
 function KpiCard({ label, value, sub, icon: Icon, color }: { label: string; value: number | string; sub: string; icon: typeof Clock; color: "teal" | "gold" }) {
   return (
@@ -999,13 +1148,13 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (e: FormEvent<HTMLFormEleme
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
           <Field name="name" label="Nombre" required placeholder="Corte de cabello" />
-          <Field name="category" label="CategorÃÂÃÂ­a" placeholder="Corte, Barba, Combo..." />
+          <Field name="category" label="Categoría" placeholder="Corte, Barba, Combo..." />
           <div className="grid grid-cols-2 gap-3">
-            <Field name="duration_min" label="DuraciÃÂÃÂ³n (min)" type="number" defaultValue="30" required />
+            <Field name="duration_min" label="Duración (min)" type="number" defaultValue="30" required />
             <Field name="price" label="Precio" type="number" defaultValue="500" required />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="description">DescripciÃÂÃÂ³n</Label>
+            <Label htmlFor="description">Descripción</Label>
             <textarea id="description" name="description" placeholder="Opcional..." className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
           <Button type="submit" className="w-full">Crear servicio</Button>
@@ -1021,11 +1170,11 @@ function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmi
       <CardHeader><CardTitle className="text-base">Nuevo barbero</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
-          <Field name="display_name" label="Nombre pÃÂÃÂºblico" required placeholder="Ej: Miguel" />
-          <Field name="specialty" label="Especialidad" placeholder="Ej: Cortes clÃÂÃÂ¡sicos" />
+          <Field name="display_name" label="Nombre público" required placeholder="Ej: Miguel" />
+          <Field name="specialty" label="Especialidad" placeholder="Ej: Cortes clásicos" />
           <div className="space-y-1">
             <Label htmlFor="bio">Bio</Label>
-            <textarea id="bio" name="bio" placeholder="Breve descripciÃÂÃÂ³n..." className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <textarea id="bio" name="bio" placeholder="Breve descripción..." className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
           {services.length > 0 && (
             <div className="space-y-2">

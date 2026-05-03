@@ -22,18 +22,18 @@ const registerSchema = z.object({
   businessName: z.string().optional(),
   specialty: z.string().optional(),
   shopSlug: z.string().optional(),
-  email: z.string().email("Correo invÃ¡lido"),
-  phone: z.string().min(7, "TelÃ©fono requerido"),
+  email: z.string().email("Correo inválido"),
+  phone: z.string().min(7, "Teléfono requerido"),
   countryCode: z.string().min(2, "País requerido"),
   currency: z.string().default("USD"),
   city: z.string().min(2, "Ciudad requerida"),
   address: z.string().optional(),
   description: z.string().optional(),
-  password: z.string().min(6, "MÃ­nimo 6 caracteres"),
+  password: z.string().min(6, "Mínimo 6 caracteres"),
   confirmPassword: z.string(),
 })
   .refine((d) => d.password === d.confirmPassword, {
-    message: "Las contraseÃ±as no coinciden",
+    message: "Las contraseñas no coinciden",
     path: ["confirmPassword"],
   })
   .refine((d) => d.accountType !== "barbershop" || Boolean(d.businessName?.trim()), {
@@ -41,7 +41,7 @@ const registerSchema = z.object({
     path: ["businessName"],
   })
   .refine((d) => d.accountType !== "barbershop" || Boolean(d.address?.trim()), {
-    message: "DirecciÃ³n requerida",
+    message: "Dirección requerida",
     path: ["address"],
   });
 
@@ -125,7 +125,7 @@ export default function RegisterPage() {
         title: "Error al registrarse",
         description:
           msg.includes("Invalid URL") || msg.includes("supabaseUrl")
-            ? "Supabase no estÃ¡ configurado. Agrega las variables en .env.local."
+            ? "Supabase no está configurado. Agrega las variables en .env.local."
             : msg.includes("email") && msg.includes("invalid")
               ? "Usa un correo real. Algunos dominios de prueba no son aceptados."
               : msg,
@@ -138,7 +138,7 @@ export default function RegisterPage() {
     <Card className="w-full max-w-xl">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Crea tu cuenta</CardTitle>
-        <CardDescription>Elige cÃ³mo usarÃ¡s iBarber.</CardDescription>
+        <CardDescription>Elige cómo usarás iBarber.</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -152,7 +152,7 @@ export default function RegisterPage() {
             >
               <option value="client">Cliente</option>
               <option value="barber">Barbero</option>
-              <option value="barbershop">BarberÃ­a</option>
+              <option value="barbershop">Barbería</option>
             </select>
           </div>
 
@@ -170,11 +170,11 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="specialty">Especialidad</Label>
-                <Input id="specialty" placeholder="Fade, barba, diseÃ±o..." {...register("specialty")} />
+                <Input id="specialty" placeholder="Fade, barba, diseño..." {...register("specialty")} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="shopSlug">BarberÃ­a donde trabajas</Label>
-                <Input id="shopSlug" placeholder="slug de la barberÃ­a, opcional" {...register("shopSlug")} />
+                <Label htmlFor="shopSlug">Barbería donde trabajas</Label>
+                <Input id="shopSlug" placeholder="slug de la barbería, opcional" {...register("shopSlug")} />
               </div>
             </div>
           )}
@@ -204,7 +204,7 @@ export default function RegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">TelÃ©fono / WhatsApp *</Label>
+              <Label htmlFor="phone">Teléfono / WhatsApp *</Label>
               <Input id="phone" type="tel" autoComplete="tel" {...register("phone")} />
               {errors.phone && (
                 <p className="text-xs text-destructive">{errors.phone.message}</p>
@@ -214,7 +214,7 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="countryCode">PaÃ­s *</Label>
+              <Label htmlFor="countryCode">País *</Label>
               <select
                 id="countryCode"
                 className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
@@ -256,7 +256,7 @@ export default function RegisterPage() {
           {accountType === "barbershop" && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="address">DirecciÃ³n *</Label>
+                <Label htmlFor="address">Dirección *</Label>
                 <Input id="address" autoComplete="street-address" {...register("address")} />
                 {errors.address && (
                   <p className="text-xs text-destructive">{errors.address.message}</p>
@@ -264,11 +264,11 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">DescripciÃ³n</Label>
+                <Label htmlFor="description">Descripción</Label>
                 <textarea
                   id="description"
                   className="flex min-h-[84px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
-                  placeholder="Especialidad, ambiente, zona o ventajas de tu barberÃ­a."
+                  placeholder="Especialidad, ambiente, zona o ventajas de tu barbería."
                   {...register("description")}
                 />
               </div>
@@ -277,7 +277,7 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="password">ContraseÃ±a *</Label>
+              <Label htmlFor="password">Contraseña *</Label>
               <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
               {errors.password && (
                 <p className="text-xs text-destructive">{errors.password.message}</p>
@@ -299,7 +299,7 @@ export default function RegisterPage() {
                 Creando cuenta...
               </>
             ) : accountType === "barbershop" ? (
-              "Registrar barberÃ­a"
+              "Registrar barbería"
             ) : accountType === "barber" ? (
               "Crear cuenta de barbero"
             ) : (
@@ -309,9 +309,9 @@ export default function RegisterPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Â¿Ya tienes cuenta?{" "}
+          ¿Ya tienes cuenta?{" "}
           <Link href="/login" className="text-primary font-medium hover:underline">
-            Inicia sesiÃ³n
+            Inicia sesión
           </Link>
         </p>
       </CardContent>

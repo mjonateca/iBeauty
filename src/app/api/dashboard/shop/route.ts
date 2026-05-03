@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireOwnedActiveShop } from "@/lib/server-authz";
+import { normalizeMapsUrl } from "@/lib/utils";
 
 const daySchema = z.object({
   open: z.string().regex(/^\d{2}:\d{2}$/),
@@ -22,15 +23,23 @@ const shopSchema = z.object({
 export async function PATCH(request: Request) {
   const parsed = shopSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Datos invÃÂ¡lidos", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Datos inválidos", details: parsed.error.flatten() }, { status: 400 });
   }
 
   const context = await requireOwnedActiveShop();
   if (context.response) return context.response;
 
+  const payload = {
+    ...parsed.data,
+    maps_url:
+      typeof parsed.data.maps_url === "string"
+        ? normalizeMapsUrl(parsed.data.maps_url)
+        : parsed.data.maps_url,
+  };
+
   const { data, error } = await context.supabase
     .from("shops")
-    .update(parsed.data)
+    .update(payload)
     .eq("id", context.shop.id)
     .select("*")
     .single();

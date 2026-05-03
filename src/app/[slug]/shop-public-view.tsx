@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Star, Clock, Scissors, Home, ExternalLink } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, normalizeMapsUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AccountRole, Shop, Barber, Service } from "@/types/database";
@@ -38,26 +38,24 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
     return activeServices.filter((s) => serviceIds.has(s.id));
   }
 
-  // Only use maps_url directly â must be a Google Maps embed URL (maps/embed?pb=...)
-  // Users get this from: Google Maps â Share â Embed a map â copy the src attribute
   const mapsEmbedSrc = (() => {
-    const url = shop.maps_url;
+    const url = normalizeMapsUrl(shop.maps_url);
     if (!url) return null;
-    if (url.includes('/embed')) return url;
+    if (url.includes("/embed")) return url;
     try {
       const u = new URL(url);
-      const q = u.searchParams.get('q');
-      if (q) return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed&hl=es`;
+      const q = u.searchParams.get("q");
+      if (q) return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed&hl=es`;
       const match = url.match(/@([-\d.]+),([-\d.]+)/);
-      if (match) return `https://maps.google.com/maps?q=${match[1]},${match[2]}&output=embed&hl=es`;
+      if (match) return `https://www.google.com/maps?q=${match[1]},${match[2]}&output=embed&hl=es`;
     } catch {}
-    return url.includes('?') ? url + '&output=embed' : url + '?output=embed';
+    return url.includes("?") ? `${url}&output=embed` : `${url}?output=embed`;
   })();
-  const mapsExternalUrl = shop.maps_url || null;
+  const mapsExternalUrl = normalizeMapsUrl(shop.maps_url) || null;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted))]">
-      {/* Header de la barberÃ­a */}
+      {/* Header de la barbería */}
       <div className="relative overflow-hidden bg-[hsl(var(--foreground))] text-white">
         <div
           className="absolute inset-0 opacity-30"
@@ -112,7 +110,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
               {!shop.address && mapsExternalUrl && (
                 <a href={mapsExternalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1 hover:text-white">
                   <MapPin className="h-3.5 w-3.5" />
-                  Ver ubicaciÃ³n en Google Maps <ExternalLink className="h-3 w-3" />
+                  Ver ubicación en Google Maps <ExternalLink className="h-3 w-3" />
                 </a>
               )}
               {shop.phone && (
@@ -212,7 +210,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
             {activeServices.length === 0 && (
               <Card className="border-none shadow-none">
                 <CardContent className="p-4 text-sm text-muted-foreground">
-                  Esta barberÃ­a aÃºn no tiene servicios activos.
+                  Esta barbería aún no tiene servicios activos.
                 </CardContent>
               </Card>
             )}
@@ -223,7 +221,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
         {mapsEmbedSrc && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">UbicaciÃ³n</h2>
+              <h2 className="text-lg font-semibold">Ubicación</h2>
               {mapsExternalUrl && (
                 <a
                   href={mapsExternalUrl}
@@ -245,7 +243,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="UbicaciÃ³n de la barberÃ­a"
+                title="Ubicación de la barbería"
               />
             </div>
             {shop.address && (
@@ -273,14 +271,14 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
 
           {viewerRole && viewerRole !== "client" && (
             <p className="mt-3 rounded-lg border bg-background p-3 text-center text-xs text-muted-foreground">
-              EstÃ¡s viendo esta pÃ¡gina como {viewerRole === "barber" ? "barbero" : "barberÃ­a"}.
+              Estás viendo esta página como {viewerRole === "barber" ? "barbero" : "barbería"}.
               Para reservar, usa una cuenta cliente.
             </p>
           )}
 
           {shop.deposit_required && shop.deposit_amount > 0 && (
             <p className="text-xs text-center text-muted-foreground mt-3">
-              Se requiere depÃ³sito de {formatCurrency(shop.deposit_amount, shop.currency || "USD")} al reservar
+              Se requiere depósito de {formatCurrency(shop.deposit_amount, shop.currency || "USD")} al reservar
             </p>
           )}
         </div>

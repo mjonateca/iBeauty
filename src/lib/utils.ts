@@ -31,3 +31,41 @@ export function formatTime(time: string): string {
   const hour = h % 12 || 12;
   return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
 }
+
+export function normalizeMapsUrl(value: string | null | undefined): string | null {
+  const raw = value?.trim();
+  if (!raw) return null;
+
+  const iframeSrc = raw.match(/src=["']([^"']+)["']/i)?.[1]?.trim();
+  const candidate = iframeSrc || raw;
+
+  try {
+    const url = new URL(candidate);
+    const host = url.hostname.replace(/^www\./, "");
+
+    if (host.includes("google.") || host.includes("goo.gl")) {
+      if (url.pathname.includes("/maps/embed") || url.pathname.includes("/embed")) {
+        return url.toString();
+      }
+
+      const query = url.searchParams.get("q") || url.searchParams.get("query");
+      if (query) {
+        return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=es`;
+      }
+
+      const coords = candidate.match(/@([-\d.]+),([-\d.]+)/);
+      if (coords) {
+        return `https://www.google.com/maps?q=${coords[1]},${coords[2]}&output=embed&hl=es`;
+      }
+
+      const place = url.pathname.match(/\/place\/([^/]+)/);
+      if (place) {
+        return `https://www.google.com/maps?q=${encodeURIComponent(decodeURIComponent(place[1]).replace(/\+/g, " "))}&output=embed&hl=es`;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return candidate;
+}

@@ -232,7 +232,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       : Promise.resolve({ data: [] }),
     admin.from("notification_events").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
     admin.from("reviews").select("*, barbers!inner(id, display_name, shop_id)").eq("barbers.shop_id", shop.id).order("created_at", { ascending: false }).limit(200),
-    admin.from("email_notifications").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(50),
+    admin
+      .from("email_notifications")
+      .select("*")
+      .eq("shop_id", shop.id)
+      .eq("status", "sent")
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
 
   return (
