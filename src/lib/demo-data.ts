@@ -16,9 +16,9 @@ export const demoShop: Shop = {
   phone: "+1 809-555-0100",
   whatsapp: "+1 809-555-0100",
   country_code: "DO",
-  country_name: "República Dominicana",
+  country_name: "RepÃºblica Dominicana",
   city: "Santiago",
-  description: "Barbería demo para probar reservas, barberos y servicios.",
+  description: "BarberÃ­a demo para probar reservas, barberos y servicios.",
   is_active: true,
   opening_hours: {
     lunes:     { open: "09:00", close: "19:00", closed: false },
@@ -33,6 +33,8 @@ export const demoShop: Shop = {
   deposit_amount: 0,
   payments_enabled: true,
   online_payment_mode: "optional",
+  currency: "DOP",
+  currency_symbol: "RD$",
   created_at: new Date().toISOString(),
 };
 
@@ -43,11 +45,11 @@ export const demoBarbers: Barber[] = [
     shop_id: "demo-shop-1",
     display_name: "Juan el Maestro",
     avatar_url: null,
-    bio: "10 años de experiencia, especialista en cortes clásicos y modernos.",
+    bio: "10 aÃ±os de experiencia, especialista en cortes clÃ¡sicos y modernos.",
     portfolio_urls: [],
     rating: 4.8,
     is_independent: false,
-    specialty: "Cortes clásicos",
+    specialty: "Cortes clÃ¡sicos",
     is_active: true,
     created_at: new Date().toISOString(),
   },
@@ -57,7 +59,7 @@ export const demoBarbers: Barber[] = [
     shop_id: "demo-shop-1",
     display_name: "Carlos Style",
     avatar_url: null,
-    bio: "Especialista en degradados y diseños creativos.",
+    bio: "Especialista en degradados y diseÃ±os creativos.",
     portfolio_urls: [],
     rating: 4.6,
     is_independent: false,
@@ -68,10 +70,10 @@ export const demoBarbers: Barber[] = [
 ];
 
 export const demoServices: Service[] = [
-  { id: "svc-1", shop_id: "demo-shop-1", name: "Corte de cabello", duration_min: 30, price: 350, currency: "DOP", is_active: true, description: "Corte clásico o moderno.", category: "Cabello", is_visible: true, sort_order: 1, created_at: new Date().toISOString() },
+  { id: "svc-1", shop_id: "demo-shop-1", name: "Corte de cabello", duration_min: 30, price: 350, currency: "DOP", is_active: true, description: "Corte clÃ¡sico o moderno.", category: "Cabello", is_visible: true, sort_order: 1, created_at: new Date().toISOString() },
   { id: "svc-2", shop_id: "demo-shop-1", name: "Corte + barba",    duration_min: 45, price: 550, currency: "DOP", is_active: true, description: "Corte completo con perfilado.", category: "Combo", is_visible: true, sort_order: 2, created_at: new Date().toISOString() },
   { id: "svc-3", shop_id: "demo-shop-1", name: "Barba",            duration_min: 20, price: 300, currency: "DOP", is_active: true, description: "Arreglo y perfilado de barba.", category: "Barba", is_visible: true, sort_order: 3, created_at: new Date().toISOString() },
-  { id: "svc-4", shop_id: "demo-shop-1", name: "Corte infantil",   duration_min: 25, price: 300, currency: "DOP", is_active: true, description: "Corte para niños.", category: "Cabello", is_visible: true, sort_order: 4, created_at: new Date().toISOString() },
+  { id: "svc-4", shop_id: "demo-shop-1", name: "Corte infantil",   duration_min: 25, price: 300, currency: "DOP", is_active: true, description: "Corte para niÃ±os.", category: "Cabello", is_visible: true, sort_order: 4, created_at: new Date().toISOString() },
 ];
 
 export const demoClient: Client = {
@@ -83,7 +85,7 @@ export const demoClient: Client = {
   first_name: "Demo",
   last_name: "Usuario",
   country_code: "DO",
-  country_name: "República Dominicana",
+  country_name: "RepÃºblica Dominicana",
   city: "Santiago",
   created_at: new Date().toISOString(),
 };
@@ -102,7 +104,7 @@ export const demoBookings: (Booking & {
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
     payment_status: "pending", payment_required: false, payment_amount: 350, payment_currency: "DOP", paid_at: null, confirmed_at: null, confirmed_by_user_id: null,
     whatsapp_reminder_sent: false, created_at: new Date().toISOString(),
-    clients: { name: "Pedro Rodríguez", phone: "+1 809-555-0300", whatsapp: null },
+    clients: { name: "Pedro RodrÃ­guez", phone: "+1 809-555-0300", whatsapp: null },
     barbers: { display_name: "Juan el Maestro" },
     services: { name: "Corte de cabello", duration_min: 30, price: 350 },
   },
@@ -113,7 +115,7 @@ export const demoBookings: (Booking & {
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
     payment_status: "paid", payment_required: false, payment_amount: 550, payment_currency: "DOP", paid_at: new Date().toISOString(), confirmed_at: null, confirmed_by_user_id: null,
     whatsapp_reminder_sent: false, created_at: new Date().toISOString(),
-    clients: { name: "Luis Martínez", phone: "+1 809-555-0400", whatsapp: "+1 809-555-0400" },
+    clients: { name: "Luis MartÃ­nez", phone: "+1 809-555-0400", whatsapp: "+1 809-555-0400" },
     barbers: { display_name: "Carlos Style" },
     services: { name: "Corte + barba", duration_min: 45, price: 550 },
   },
