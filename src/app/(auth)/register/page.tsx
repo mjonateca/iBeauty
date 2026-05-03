@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { COUNTRIES, getCurrencyForCountry } from "@/lib/locations";
+import { COUNTRIES, getCurrencyForCountry, getCitiesForCountry } from "@/lib/locations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
