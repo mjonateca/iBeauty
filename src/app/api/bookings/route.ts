@@ -11,6 +11,10 @@ const createBookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
+  manual: z.boolean().optional(),
+  client_name: z.string().optional(),
+  client_phone: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
@@ -36,17 +40,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const rawBody = await request.json();
+  const isManual = rawBody.manual === true;
+
   const account = await ensureAccountRecords(user);
-  if (account.role !== "client") {
+  if (!isManual && account.role !== "client") {
     return NextResponse.json({ error: "Solo una cuenta cliente puede crear reservas" }, { status: 403 });
   }
 
   const client = account.client;
-  if (!client) {
+  if (!isManual && !client) {
     return NextResponse.json({ error: "Perfil de cliente no encontrado" }, { status: 404 });
   }
 
-  const parsed = createBookingSchema.safeParse(await request.json());
+  const parsed = createBookingSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos inválidos", details: parsed.error.flatten() }, { status: 400 });
   }
@@ -130,8 +137,11 @@ export async function POST(request: Request) {
   const { data: booking, error } = await admin
     .from("bookings")
     .insert({
-      client_id: client.id,
-      ...parsed.data,
+      client_id: isManual ? null : client!.id,
+      client_name: isManual ? (parsed.data.client_name ?? null) : null,
+      client_phone: isManual ? (parsed.data.client_phone ?? null) : null,
+      notes: parsed.data.notes ?? null,
+      ...((() => { const {manual:_m, client_name:_cn, client_phone:_cp, notes:_n, ...rest} = parsed.data; return rest; })()),
       status: "confirmed",
       deposit_status: "none",
       deposit_amount: 0,
