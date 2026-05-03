@@ -623,7 +623,7 @@ export default function DashboardClient({
                 <select className="w-full border rounded px-2 py-1 text-sm mt-1 bg-background"
                   value={manualForm.barber_id} onChange={e => setManualForm(f=>({...f, barber_id: e.target.value}))}>
                   <option value="">Seleccionar...</option>
-                  {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  {barbers.map(b => <option key={b.id} value={b.id}>{b.display_name}</option>)}
                 </select>
               </div>
               <div>
