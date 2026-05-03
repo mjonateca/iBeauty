@@ -14,14 +14,14 @@ const shopSchema = z.object({
   address: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   banner_url: z.string().url().nullable().optional(),
-  currency: body.currency ?? undefined,
-      maps_url: z.string().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  maps_url: z.string().nullable().optional(),
 });
 
 export async function PATCH(request: Request) {
   const parsed = shopSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Datos invÃ¡lidos", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Datos invÃÂ¡lidos", details: parsed.error.flatten() }, { status: 400 });
   }
 
   const context = await requireOwnedActiveShop();
