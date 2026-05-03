@@ -50,7 +50,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
       if (q) return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed&hl=es`;
       const match = url.match(/@([-\d.]+),([-\d.]+)/);
       if (match) return `https://maps.google.com/maps?q=${match[1]},${match[2]}&output=embed&hl=es`;
-    } catch(e) {}
+    } catch {}
     return url.includes('?') ? url + '&output=embed' : url + '?output=embed';
   })();
   const mapsExternalUrl = shop.maps_url || null;

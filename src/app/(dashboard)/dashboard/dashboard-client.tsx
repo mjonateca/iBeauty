@@ -3,12 +3,10 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
 import type { InputHTMLAttributes } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
-  Bell,
   CalendarDays,
   Camera,
-  CheckCircle,
   Clock,
   CreditCard,
   ExternalLink,
@@ -17,7 +15,6 @@ import {
   Mail,
   Scissors,
   Send,
-  Settings,
   Star,
   Trash2,
   TrendingUp,
@@ -220,7 +217,6 @@ export default function DashboardClient({
   todayStr,
   initialTab = "summary",
 }: Props) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = (searchParams.get("tab") || initialTab) as TabId;
   const [bookings, setBookings] = useState(initialBookings);
