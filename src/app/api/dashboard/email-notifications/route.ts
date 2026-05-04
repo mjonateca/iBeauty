@@ -176,7 +176,9 @@ const shopSlug = shopData?.slug || "";
     });
 
     const result = await resend.emails.send({
-    from: `${shopName} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,      subject,
+    from: `${shopName} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,      
+      to: recipientEmail,
+      subject,
       html,
     });
 
