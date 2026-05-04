@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Metadata } from "next";
-import type { Barber, BarberRating, Client, ClientPaymentMethod, EmailNotification, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
+import type { Barber, BarberRating, Client, ClientPaymentMethod, EmailNotification, PendingWhatsappReminder, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
 import { ensureAccountRecords } from "@/lib/account-repair";
 import { IS_DEMO, demoBookings, demoShop } from "@/lib/demo-data";
 import { buildShopAnalytics } from "@/lib/shop-analytics";
@@ -34,6 +34,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         notificationEvents={[]}
         ratings={[]}
         emailNotifications={[]}
+        pendingWhatsappReminders={[]}
         subscription={null}
         paymentMethods={[]}
         analytics={{
@@ -223,8 +224,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     0
   );
   const analytics = buildShopAnalytics(bookings as never);
+  const nowIso = new Date().toISOString();
 
-  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }, { data: ratingsRaw }, { data: emailNotificationsRaw }] = await Promise.all([
+  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }, { data: ratingsRaw }, { data: emailNotificationsRaw }, { data: pendingWhatsappEventsRaw }] = await Promise.all([
     admin.from("services").select("*").eq("shop_id", shop.id).order("sort_order").order("name"),
     admin.from("barbers").select("*, barber_services(service_id)").eq("shop_id", shop.id).order("display_name"),
     clientIds.length
@@ -239,7 +241,43 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       .eq("status", "sent")
       .order("created_at", { ascending: false })
       .limit(50),
+    admin
+      .from("notification_events")
+      .select("id, booking_id, scheduled_for, status")
+      .eq("shop_id", shop.id)
+      .eq("channel", "whatsapp")
+      .eq("type", "booking_reminder")
+      .eq("status", "pending")
+      .lte("scheduled_for", nowIso)
+      .order("scheduled_for", { ascending: true })
+      .limit(20),
   ]);
+
+  const bookingMap = new Map(bookings.map((booking) => [booking.id, booking]));
+  const pendingWhatsappReminders: PendingWhatsappReminder[] = ((pendingWhatsappEventsRaw || []) as Array<{
+    id: string;
+    booking_id: string | null;
+    scheduled_for: string | null;
+  }>)
+    .map((event) => {
+      if (!event.booking_id) return null;
+      const booking = bookingMap.get(event.booking_id);
+      if (!booking) return null;
+
+      return {
+        event_id: event.id,
+        booking_id: booking.id,
+        scheduled_for: event.scheduled_for,
+        client_name: booking.clients?.name || booking.client_name || "Cliente",
+        client_phone: booking.client_phone || booking.clients?.phone || null,
+        client_whatsapp: booking.clients?.whatsapp || null,
+        service_name: booking.services?.name || "Servicio",
+        barber_name: booking.barbers?.display_name || "Tu barbero",
+        date: booking.date || "",
+        start_time: booking.start_time,
+      };
+    })
+    .filter(Boolean) as PendingWhatsappReminder[];
 
   return (
     <DashboardClient
@@ -252,6 +290,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       notificationEvents={(notificationEvents || []) as never}
       ratings={(ratingsRaw || []) as BarberRating[]}
       emailNotifications={(emailNotificationsRaw || []) as EmailNotification[]}
+      pendingWhatsappReminders={pendingWhatsappReminders}
       subscription={subscriptionRaw as ShopSubscription | null}
       paymentMethods={(paymentMethodsRaw || []) as ShopPaymentMethod[]}
       analytics={analytics}

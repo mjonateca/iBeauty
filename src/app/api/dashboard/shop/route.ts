@@ -18,6 +18,7 @@ const shopSchema = z.object({
   banner_url: z.string().url().nullable().optional(),
   currency: z.string().nullable().optional(),
   maps_url: z.string().nullable().optional(),
+  reminder_channels: z.array(z.enum(["email", "whatsapp"])).optional(),
 });
 
 export async function PATCH(request: Request) {

@@ -36,6 +36,7 @@ import type {
   BookingStatus,
   EmailNotification,
   NotificationEvent,
+  PendingWhatsappReminder,
   PaymentStatus,
   Service,
   Shop,
@@ -43,6 +44,7 @@ import type {
   ShopSubscription,
   SubscriptionStatus,
 } from "@/types/database";
+import { getReminderChannelsLabel, normalizeReminderChannels, type ReminderChannel } from "@/lib/notifications";
 
 export interface BookingWithRelations {
   id: string;
@@ -58,6 +60,7 @@ export interface BookingWithRelations {
   payment_required: boolean;
   payment_amount: number;
   payment_currency: string;
+  whatsapp_reminder_sent?: boolean;
   clients: { name: string; phone: string | null; whatsapp: string | null } | null;
   barbers: { display_name: string } | null;
   services: { name: string; duration_min: number; price: number } | null;
@@ -101,6 +104,7 @@ interface Props {
   notificationEvents: NotificationEvent[];
   ratings: BarberRating[];
   emailNotifications: EmailNotification[];
+  pendingWhatsappReminders: PendingWhatsappReminder[];
   subscription: ShopSubscription | null;
   paymentMethods: ShopPaymentMethod[];
   analytics: Analytics;
@@ -109,7 +113,7 @@ interface Props {
   initialTab?: string;
 }
 
-type TabId = "summary" | "bookings" | "services" | "barbers" | "clients" | "schedule" | "email" | "settings";
+type TabId = "summary" | "bookings" | "services" | "barbers" | "clients" | "schedule" | "notifications" | "settings";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   pending: "Pendiente",
@@ -221,6 +225,7 @@ export default function DashboardClient({
   clients,
   ratings,
   emailNotifications: initialEmailNotifications,
+  pendingWhatsappReminders: initialPendingWhatsappReminders,
   subscription,
   paymentMethods,
   analytics,
@@ -244,9 +249,11 @@ export default function DashboardClient({
   const [bannerPreview, setBannerPreview] = useState<string | null>(shop.banner_url || null);
   const [uploadingBarberPhoto, setUploadingBarberPhoto] = useState<string | null>(null);
   const [emailNotifications, setEmailNotifications] = useState(initialEmailNotifications);
-  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [pendingWhatsappReminders, setPendingWhatsappReminders] = useState(initialPendingWhatsappReminders);
+  const [openingWhatsAppId, setOpeningWhatsAppId] = useState<string | null>(null);
   const [creatingManualBooking, setCreatingManualBooking] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
+  const [reminderChannels, setReminderChannels] = useState<ReminderChannel[]>(() => normalizeReminderChannels(shop.reminder_channels));
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const clientItems = useMemo(
@@ -465,18 +472,52 @@ export default function DashboardClient({
     if (res.ok) { const p = await res.json().catch(() => ({})); setShopState(p); setBannerPreview(null); toast({ title: "Banner eliminado" }); }
   }
 
-  async function sendEmailReminder(bookingId: string) {
-    setSendingReminder(bookingId);
-    const res = await fetch("/api/dashboard/email-notifications", {
+  async function saveReminderChannels(nextChannels: ReminderChannel[]) {
+    const normalized = normalizeReminderChannels(nextChannels, []);
+    const response = await fetch("/api/dashboard/shop", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reminder_channels: normalized }),
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se guardó la configuración", description: payload.error });
+      return;
+    }
+
+    setReminderChannels(normalized);
+    setShopState(payload);
+    toast({ title: "Canales de recordatorio actualizados" });
+  }
+
+  async function toggleReminderChannel(channel: ReminderChannel) {
+    const current = normalizeReminderChannels(reminderChannels, []);
+    const next = current.includes(channel) ? current.filter((item) => item !== channel) : [...current, channel];
+    await saveReminderChannels(next);
+  }
+
+  async function openWhatsAppReminder(eventId: string) {
+    setOpeningWhatsAppId(eventId);
+    const response = await fetch("/api/dashboard/whatsapp-reminders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: bookingId, type: "reminder" }),
+      body: JSON.stringify({ event_id: eventId }),
     });
-    const payload = await res.json().catch(() => ({}));
-    setSendingReminder(null);
-    if (!res.ok) { toast({ variant: "destructive", title: "Error al enviar", description: payload.error }); return; }
-    if (payload.notification) setEmailNotifications((prev) => [payload.notification, ...prev]);
-    toast({ title: payload.recipientEmail ? `Recordatorio enviado a ${payload.recipientEmail}` : "Sin email registrado para este cliente" });
+    const payload = await response.json().catch(() => ({}));
+    setOpeningWhatsAppId(null);
+
+    if (!response.ok || !payload.url) {
+      toast({ variant: "destructive", title: "No se pudo abrir WhatsApp", description: payload.error });
+      return;
+    }
+
+    window.open(payload.url, "_blank", "noopener,noreferrer");
+    setPendingWhatsappReminders((prev) => prev.filter((reminder) => reminder.event_id !== eventId));
+    setBookings((prev) =>
+      prev.map((booking) => (booking.id === payload.booking_id ? { ...booking, whatsapp_reminder_sent: true } : booking))
+    );
+    toast({ title: "WhatsApp Web abierto", description: "Solo revisa el mensaje y pulsa Enter." });
   }
 
   async function createManualBooking(event: FormEvent<HTMLFormElement>) {
@@ -764,9 +805,11 @@ export default function DashboardClient({
                           {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
                         </Button>
                       ))}
-                      <Button size="sm" variant="outline" className="ml-auto h-7 text-xs gap-1" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
-                        {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Mail className="h-3 w-3" /> Recordatorio</>}
-                      </Button>
+                      {booking.whatsapp_reminder_sent && (
+                        <span className="ml-auto inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                          WhatsApp preparado
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))
@@ -955,19 +998,76 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {/* ── EMAIL ── */}
-      {currentTab === "email" && (
+      {/* ── NOTIFICATIONS ── */}
+      {currentTab === "notifications" && (
         <div className="space-y-6">
           <Card className="shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-primary" /> Recordatorios de email
+                <Mail className="h-4 w-4 text-primary" /> Canales de recordatorio
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">Envía recordatorios de reserva por email a tus clientes. Haz clic en el botón <span className="font-medium">Recordatorio</span> en cualquier reserva.</p>
+              <p className="text-sm text-muted-foreground">
+                La barbería puede trabajar con correo, WhatsApp o ambos. El correo sale automáticamente por cron. WhatsApp se abre en WhatsApp Web con el mensaje listo.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(["email", "whatsapp"] as ReminderChannel[]).map((channel) => {
+                  const isActive = reminderChannels.includes(channel);
+                  return (
+                    <Button
+                      key={channel}
+                      type="button"
+                      variant={isActive ? "default" : "outline"}
+                      className="gap-2"
+                      onClick={() => toggleReminderChannel(channel)}
+                    >
+                      {channel === "email" ? "Correo" : "WhatsApp"}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Activo ahora: <span className="font-medium">{getReminderChannelsLabel(reminderChannels)}</span>
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle className="text-base">WhatsApp pendientes</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {pendingWhatsappReminders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay recordatorios pendientes para WhatsApp.</p>
+              ) : (
+                pendingWhatsappReminders.map((reminder) => (
+                  <div key={reminder.event_id} className="flex items-center gap-3 rounded-xl border p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{reminder.client_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {reminder.date} · {formatTime(reminder.start_time.slice(0, 5))} · {reminder.service_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{reminder.client_whatsapp || reminder.client_phone || "Sin teléfono"}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1 shrink-0"
+                      disabled={openingWhatsAppId === reminder.event_id}
+                      onClick={() => openWhatsAppReminder(reminder.event_id)}
+                    >
+                      {openingWhatsAppId === reminder.event_id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Send className="h-3 w-3" /> Abrir WhatsApp Web</>}
+                    </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle className="text-base">Historial de correos automáticos</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
               {emailNotifications.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No hay notificaciones de email enviadas aún.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay correos enviados aún.</p>
               ) : (
                 emailNotifications.map((notif) => (
                   <div key={notif.id} className="flex items-center gap-3 rounded-xl border p-3">
@@ -980,27 +1080,6 @@ export default function DashboardClient({
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${notif.status === "sent" ? "bg-emerald-100 text-emerald-700" : notif.status === "failed" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{notif.status === "sent" ? "Enviado" : notif.status === "failed" ? "Error" : "Pendiente"}</span>
                       <p className="mt-0.5 text-xs text-muted-foreground">{new Date(notif.created_at).toLocaleString()}</p>
                     </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-none">
-            <CardHeader><CardTitle className="text-base">Enviar recordatorio a reservas próximas</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {bookings.filter((b) => b.status === "confirmed").slice(0, 10).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay reservas confirmadas próximas.</p>
-              ) : (
-                bookings.filter((b) => b.status === "confirmed").slice(0, 10).map((booking) => (
-                  <div key={booking.id} className="flex items-center gap-3 rounded-xl border p-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{booking.clients?.name || "Cliente"}</p>
-                      <p className="text-xs text-muted-foreground">{booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name}</p>
-                    </div>
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 shrink-0" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
-                      {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Send className="h-3 w-3" /> Enviar</>}
-                    </Button>
                   </div>
                 ))
               )}

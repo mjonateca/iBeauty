@@ -20,6 +20,7 @@ export const demoShop: Shop = {
   city: "Santiago",
   description: "Barbería demo para probar reservas, barberos y servicios.",
   is_active: true,
+  reminder_channels: ["email", "whatsapp"],
   opening_hours: {
     lunes:     { open: "09:00", close: "19:00", closed: false },
     martes:    { open: "09:00", close: "19:00", closed: false },
@@ -29,6 +30,7 @@ export const demoShop: Shop = {
     sabado:    { open: "09:00", close: "17:00", closed: false },
     domingo:   { open: "09:00", close: "13:00", closed: true },
   },
+  reminder_lead_minutes: 180,
   deposit_required: false,
   deposit_amount: 0,
   payments_enabled: true,
