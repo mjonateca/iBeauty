@@ -47,6 +47,14 @@ function minutesToTime(total: number) {
   return `${hours}:${minutes}`;
 }
 
+function ceilToHalfHour(total: number) {
+  return Math.ceil(total / 30) * 30;
+}
+
+function floorToHalfHour(total: number) {
+  return Math.floor(total / 30) * 30;
+}
+
 function intervalsOverlap(start: string, end: string, booked: BookedInterval) {
   return timeToMinutes(start) < timeToMinutes(booked.end) && timeToMinutes(end) > timeToMinutes(booked.start);
 }
@@ -93,8 +101,8 @@ function buildSlots(date: Date, openingHours: OpeningHoursValue, duration = 30) 
   const dayConfig = openingHours[weekdayKey(date)];
   if (!dayConfig || dayConfig.closed) return [];
 
-  const start = timeToMinutes(dayConfig.open);
-  const end = timeToMinutes(dayConfig.close);
+  const start = ceilToHalfHour(timeToMinutes(dayConfig.open));
+  const end = floorToHalfHour(timeToMinutes(dayConfig.close));
   const slots: string[] = [];
 
   for (let minute = start; minute + duration <= end; minute += 30) {
