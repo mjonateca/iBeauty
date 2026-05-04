@@ -959,7 +959,7 @@ export default function DashboardClient({
                           {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
                         </Button>
                       ))}
-                      {booking.status === "confirmed" && isEmailEnabled && (
+                      {(["confirmed", "completed"] as BookingStatus[]).includes(booking.status) && isEmailEnabled && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -970,7 +970,7 @@ export default function DashboardClient({
                           {sendingEmailBookingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : reminderEmailsSentByBooking.has(booking.id) ? "Reenviar correo" : "Enviar correo"}
                         </Button>
                       )}
-                      {booking.status === "confirmed" && isWhatsAppEnabled && (
+                      {(["confirmed", "completed"] as BookingStatus[]).includes(booking.status) && isWhatsAppEnabled && (
                         <Button
                           size="sm"
                           variant="outline"
