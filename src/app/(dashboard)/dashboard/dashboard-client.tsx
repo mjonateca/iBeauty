@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { buildAppUrl, formatCurrency, formatTime, getCurrentDateInTimeZone } from "@/lib/utils";
+import { buildAppUrl, formatCurrency, formatTime, getCurrentDateInTimeZone, getCurrentTimeInTimeZone } from "@/lib/utils";
 import { getTimeZoneForCountry } from "@/lib/locations";
 import type {
   Barber,
@@ -325,6 +325,17 @@ export default function DashboardClient({
   );
   const isEmailEnabled = reminderChannels.includes("email");
   const isWhatsAppEnabled = reminderChannels.includes("whatsapp");
+
+  function isReminderEligible(booking: BookingWithRelations) {
+    if (booking.status !== "confirmed" || !booking.date) return false;
+
+    const today = getCurrentDateInTimeZone(shopTimeZone);
+    if (booking.date > today) return true;
+    if (booking.date < today) return false;
+
+    const currentTime = getCurrentTimeInTimeZone(shopTimeZone);
+    return booking.start_time.slice(0, 5) > currentTime;
+  }
 
   // Ratings grouped by barber_id
   const ratingsByBarber = useMemo(() => {
@@ -959,7 +970,7 @@ export default function DashboardClient({
                           {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
                         </Button>
                       ))}
-                      {(["confirmed", "completed"] as BookingStatus[]).includes(booking.status) && isEmailEnabled && (
+                      {isReminderEligible(booking) && isEmailEnabled && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -970,7 +981,7 @@ export default function DashboardClient({
                           {sendingEmailBookingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : reminderEmailsSentByBooking.has(booking.id) ? "Reenviar correo" : "Enviar correo"}
                         </Button>
                       )}
-                      {(["confirmed", "completed"] as BookingStatus[]).includes(booking.status) && isWhatsAppEnabled && (
+                      {isReminderEligible(booking) && isWhatsAppEnabled && (
                         <Button
                           size="sm"
                           variant="outline"
