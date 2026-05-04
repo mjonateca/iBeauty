@@ -88,11 +88,10 @@ function buildEmailHtml({
           </table>
           ${!isCancellation ? `
           <div style="text-align:center;margin-top:24px">
-            <a href="https://ibarber.app/${shopSlug}" style="background:${color};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Ver mi reserva</a>
-          </div>` : ""}
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://i-barber.com"}/${shopSlug}" style="background:${color};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Ver mi reserva</a>          </div>` : ""}
         </td></tr>
         <tr><td style="padding:16px 32px;border-top:1px solid #f3f4f6;text-align:center">
-          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="https://ibarber.app" style="color:#0d9488;text-decoration:none">iBarber</a></p>
+          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="https://i-barber.com" style="color:#0d9488;text-decoration:none">iBarber</a></p>
         </td></tr>
       </table>
     </td></tr>
