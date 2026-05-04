@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     const html = buildEmailHtml({
       type: parsed.data.type,
       clientName: recipientName,
-      shopName: (context.shop as unknown as { name: string }).name,
+      shopName: (context.shop as unknown as { name?: string; slug?: string }).name || "iBarber",
       barberName,
       serviceName,
       date: booking.date as string,
@@ -161,8 +161,7 @@ export async function POST(request: Request) {
     });
 
     const result = await resend.emails.send({
-      from: `${(context.shop as unknown as { name: string; slug: string }).name} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,
-      to: recipientEmail,
+from: `${(context.shop as unknown as { name?: string; slug?: string }).name || "iBarber"} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,      to: recipientEmail,
       subject,
       html,
     });
