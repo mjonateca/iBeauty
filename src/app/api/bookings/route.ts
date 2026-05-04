@@ -8,6 +8,7 @@ const createBookingSchema = z.object({
   barber_id: z.string().uuid(),
   shop_id: z.string().uuid(),
   service_id: z.string().uuid(),
+  client_id: z.string().uuid().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
@@ -107,6 +108,14 @@ export async function POST(request: Request) {
     }
   }
 
+  const selectedManualClient = isManual && parsed.data.client_id
+    ? await admin.from("clients").select("id, name, phone").eq("id", parsed.data.client_id).maybeSingle()
+    : { data: null };
+
+  if (isManual && parsed.data.client_id && !selectedManualClient.data) {
+    return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+  }
+
   const { data: assignedServices } = await admin
     .from("barber_services")
     .select("service_id")
@@ -161,9 +170,9 @@ export async function POST(request: Request) {
   const { data: booking, error } = await admin
     .from("bookings")
     .insert({
-      client_id: isManual ? null : client!.id,
-      client_name: isManual ? (parsed.data.client_name ?? null) : null,
-      client_phone: isManual ? (parsed.data.client_phone ?? null) : null,
+      client_id: isManual ? selectedManualClient.data?.id || null : client!.id,
+      client_name: isManual && !selectedManualClient.data ? (parsed.data.client_name ?? null) : null,
+      client_phone: isManual && !selectedManualClient.data ? (parsed.data.client_phone ?? null) : null,
       notes: parsed.data.notes ?? null,
       ...bookingPayload,
       end_time: normalizedEndTime,

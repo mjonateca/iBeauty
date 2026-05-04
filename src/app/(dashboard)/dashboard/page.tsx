@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
-import { addDays, format } from "date-fns";
-import { es } from "date-fns/locale";
 import type { Metadata } from "next";
 import type { Barber, BarberRating, Client, ClientPaymentMethod, EmailNotification, PendingWhatsappReminder, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
 import { ensureAccountRecords } from "@/lib/account-repair";
 import { IS_DEMO, demoBookings, demoShop } from "@/lib/demo-data";
+import { getTimeZoneForCountry } from "@/lib/locations";
 import { buildShopAnalytics } from "@/lib/shop-analytics";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { addDaysToDateString, formatLongDateInTimeZone, getCurrentDateInTimeZone } from "@/lib/utils";
 import BarberDashboardClient from "./barber-dashboard-client";
 import ClientDashboardClient from "./client-dashboard-client";
 import DashboardClient from "./dashboard-client";
@@ -18,9 +18,9 @@ type DashboardPageProps = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const todayStr = format(new Date(), "EEEE d 'de' MMMM", { locale: es });
   const { tab } = await searchParams;
   const initialTab = tab || "summary";
+  const demoTodayStr = formatLongDateInTimeZone(getTimeZoneForCountry(demoShop.country_code || ""));
 
   if (IS_DEMO) {
     return (
@@ -53,7 +53,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           avgLeadMinutes: 38,
         }}
         stats={{ totalCompleted: 47, upcomingConfirmed: 8, expectedToday: 3250, expectedWeek: 18500 }}
-        todayStr={todayStr}
+        todayStr={demoTodayStr}
         initialTab={initialTab}
       />
     );
@@ -127,8 +127,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const barber = barberData as (Barber & { shops?: Shop | null; barber_services?: Array<{ service_id: string }> }) | null;
     if (!barber) redirect("/");
 
-    const today = format(new Date(), "yyyy-MM-dd");
-    const weekEnd = format(addDays(new Date(), 7), "yyyy-MM-dd");
+    const barberTimeZone = getTimeZoneForCountry(barber.shops?.country_code || "");
+    const today = getCurrentDateInTimeZone(barberTimeZone);
+    const weekEnd = addDaysToDateString(today, 7);
 
     const [{ data: todayBookingsRaw }, { data: upcomingBookingsRaw }, { data: servicesRaw }] = await Promise.all([
       admin
@@ -171,8 +172,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const shop = shopData as Shop | null;
   if (!shop) redirect("/onboarding");
 
-  const today = format(new Date(), "yyyy-MM-dd");
-  const weekEnd = format(addDays(new Date(), 7), "yyyy-MM-dd");
+  const shopTimeZone = getTimeZoneForCountry(shop.country_code || "");
+  const today = getCurrentDateInTimeZone(shopTimeZone);
+  const weekEnd = addDaysToDateString(today, 7);
+  const todayStr = formatLongDateInTimeZone(shopTimeZone);
 
   const [
     { data: todayBookingsRaw },

@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { formatCurrency, formatTime } from "@/lib/utils";
+import { formatCurrency, formatTime, getCurrentDateInTimeZone, getCurrentTimeInTimeZone, parseDateOnly } from "@/lib/utils";
+import { getTimeZoneForCountry } from "@/lib/locations";
 import type { Barber, Client, Service, Shop } from "@/types/database";
 
 interface ShopWithRelations extends Shop {
@@ -28,8 +29,9 @@ type Step = "barber" | "service" | "datetime" | "confirm" | "success";
 type BookedInterval = { start: string; end: string };
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
 
-function generateDates(days = 14): Date[] {
-  return Array.from({ length: days }, (_, i) => addDays(startOfDay(new Date()), i));
+function generateDates(timeZone: string, days = 14): Date[] {
+  const startDate = startOfDay(parseDateOnly(getCurrentDateInTimeZone(timeZone)));
+  return Array.from({ length: days }, (_, i) => addDays(startDate, i));
 }
 
 function timeToMinutes(value: string) {
@@ -103,6 +105,7 @@ function buildSlots(date: Date, openingHours: OpeningHoursValue, duration = 30) 
 }
 
 export default function BookingFlow({ shop, client, preselectedBarberId }: Props) {
+  const shopTimeZone = useMemo(() => getTimeZoneForCountry(shop.country_code || ""), [shop.country_code]);
   const activeBarbers = shop.barbers.filter((barber) => barber.is_active !== false);
   const openingHours = useMemo(() => normalizeOpeningHours(shop.opening_hours), [shop.opening_hours]);
   const preselectedBarber = preselectedBarberId ? activeBarbers.find((barber) => barber.id === preselectedBarberId) || null : null;
@@ -120,7 +123,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
   const activeServices = shop.services.filter(
     (service) => service.is_active && service.is_visible !== false && (!selectedBarber || compatibleServiceIds.size === 0 || compatibleServiceIds.has(service.id))
   );
-  const dates = generateDates(14);
+  const dates = useMemo(() => generateDates(shopTimeZone, 14), [shopTimeZone]);
   const availableSlots = selectedDate ? buildSlots(selectedDate, openingHours, selectedService?.duration_min || 30) : [];
   const selectedDayConfig = selectedDate ? openingHours[weekdayKey(selectedDate)] : null;
 
@@ -428,8 +431,9 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                       const duration = selectedService?.duration_min || 30;
                       const slotEnd = minutesToTime(timeToMinutes(slot) + duration);
                       const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
-                      const todayStr = format(new Date(), "yyyy-MM-dd");
-                      const inPast = dateStr === todayStr && timeToMinutes(slot) <= timeToMinutes(format(new Date(), "HH:mm"));
+                      const todayStr = getCurrentDateInTimeZone(shopTimeZone);
+                      const currentTime = getCurrentTimeInTimeZone(shopTimeZone);
+                      const inPast = dateStr === todayStr && timeToMinutes(slot) <= timeToMinutes(currentTime);
                       const taken = inPast || bookedSlots.some((booked) => intervalsOverlap(slot, slotEnd, booked));
 
                       return (

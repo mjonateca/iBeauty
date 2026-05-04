@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
+import { buildAppUrl } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -20,7 +21,7 @@ function buildReviewEmailHtml({
   shopSlug: string;
 }) {
   const formattedDate = format(new Date(date + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es });
-  const dashboardUrl = `https://ibarber.app/dashboard`;
+  const dashboardUrl = buildAppUrl("/dashboard?tab=bookings");
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -55,7 +56,7 @@ function buildReviewEmailHtml({
           </p>
         </td></tr>
         <tr><td style="padding:16px 32px;border-top:1px solid #f3f4f6;text-align:center">
-          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="https://ibarber.app" style="color:#0d9488;text-decoration:none">iBarber</a></p>
+          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="${buildAppUrl()}" style="color:#0d9488;text-decoration:none">iBarber</a></p>
         </td></tr>
       </table>
     </td></tr>

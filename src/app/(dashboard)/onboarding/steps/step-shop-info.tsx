@@ -6,8 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Store, Globe } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { slugify } from "@/lib/utils";
-import { COUNTRIES, getCitiesForCountry, getCountryName } from "@/lib/locations";
+import { getAppBaseUrl, slugify } from "@/lib/utils";
+import { COUNTRIES, getCitiesForCountry, getCountryName, getCurrencyForCountry } from "@/lib/locations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ const schema = z.object({
   address: z.string().min(5, "Dirección requerida"),
   countryCode: z.string().min(2, "País requerido"),
   city: z.string().min(2, "Ciudad requerida"),
+  currency: z.string().min(3, "Divisa requerida"),
   description: z.string().optional(),
 });
 
@@ -57,6 +58,7 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
       address: data.address || "",
       countryCode: data.countryCode || "",
       city: data.city || "",
+      currency: data.currency || "",
       description: data.description || "",
     },
   });
@@ -65,6 +67,10 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
   const slug = watch("slug");
   const countryCode = watch("countryCode");
   const cities = getCitiesForCountry(countryCode);
+  const currency = watch("currency");
+  const currencyOptions = Array.from(
+    new Map(COUNTRIES.map((country) => [country.currency, { code: country.currency, symbol: country.symbol }])).values()
+  );
 
   // Auto-generate slug from shop name
   useEffect(() => {
@@ -72,6 +78,12 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
       setValue("slug", slugify(shopName));
     }
   }, [shopName, setValue, data.slug]);
+
+  useEffect(() => {
+    if (countryCode && !currency) {
+      setValue("currency", getCurrencyForCountry(countryCode).currency);
+    }
+  }, [countryCode, currency, setValue]);
 
   // Check slug availability
   useEffect(() => {
@@ -141,7 +153,7 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
             </Label>
             <div className="flex items-center gap-0">
               <span className="h-11 px-3 flex items-center text-sm text-muted-foreground bg-muted rounded-l-xl border border-r-0 border-input whitespace-nowrap">
-                ibarber.do/
+                {getAppBaseUrl().replace(/^https?:\/\//, "")}/
               </span>
               <Input
                 id="slug"
@@ -204,6 +216,7 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
                   onChange: (event) => {
                     const nextCities = getCitiesForCountry(event.target.value);
                     setValue("city", nextCities[0] || "");
+                    setValue("currency", getCurrencyForCountry(event.target.value).currency);
                   },
                 })}
               >
@@ -231,6 +244,25 @@ export default function StepShopInfo({ data, onUpdate, onNext }: Props) {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="currency">Divisa *</Label>
+            <select
+              id="currency"
+              className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
+              {...register("currency")}
+            >
+              <option value="">{countryCode ? "Selecciona una divisa" : "Selecciona un país primero"}</option>
+              {currencyOptions.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.code} {item.symbol}
+                </option>
+              ))}
+            </select>
+            {countryCode && currency === getCurrencyForCountry(countryCode).currency && (
+              <p className="text-xs text-muted-foreground">Divisa sugerida según el país elegido.</p>
+            )}
           </div>
 
           <div className="space-y-2">

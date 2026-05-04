@@ -17,6 +17,7 @@ export interface OnboardingData {
   countryCode: string;
   countryName: string;
   city: string;
+  currency: string;
   description: string;
   // Paso 2
   services: Array<{ name: string; duration_min: number; price: number }>;

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { getCitiesForCountry, getCountryName, getCurrencyForCountry } from "@/lib/locations";
+import { buildAppUrl } from "@/lib/utils";
 import type { OnboardingData } from "../onboarding-wizard";
 
 const schema = z.object({
@@ -50,7 +51,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
     // Modo demo: simular guardado y redirigir
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) {
       await new Promise((r) => setTimeout(r, 800));
-      toast({ title: "¡Barbería creada! (demo)", description: "ibarber.do/barber-king ya está lista" });
+      toast({ title: "¡Barbería creada! (demo)", description: buildAppUrl("/barber-king") + " ya está lista" });
       onComplete("barber-king");
       return;
     }
@@ -75,7 +76,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
           country_code: targetCountryCode,
           country_name: targetCountryName,
           city: targetCity,
-          currency: getCurrencyForCountry(targetCountryCode).currency,
+          currency: data.currency || getCurrencyForCountry(targetCountryCode).currency,
           description: data.description || null,
           opening_hours: {
             lunes:     { open: "09:00", close: "19:00", closed: false },
@@ -180,7 +181,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
 
       toast({
         title: "¡Barbería creada!",
-        description: `ibarber.do/${shop.slug} ya está lista`,
+        description: `${buildAppUrl(`/${shop.slug}`)} ya está lista`,
       });
 
       onComplete(shop.slug);
@@ -251,7 +252,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
             </p>
             <p>
               <span className="text-muted-foreground">URL:</span>{" "}
-              <strong>ibarber.do/{data.slug}</strong>
+              <strong>{buildAppUrl(`/${data.slug}`)}</strong>
             </p>
             <p>
               <span className="text-muted-foreground">Servicios:</span>{" "}

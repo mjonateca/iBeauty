@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { InputHTMLAttributes } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -29,7 +29,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { formatCurrency, formatTime } from "@/lib/utils";
+import { buildAppUrl, formatCurrency, formatTime, getCurrentDateInTimeZone } from "@/lib/utils";
+import { getTimeZoneForCountry } from "@/lib/locations";
 import type {
   Barber,
   BarberRating,
@@ -74,6 +75,17 @@ type ClientSummary = {
   whatsapp: string | null;
   city?: string | null;
   country_name?: string | null;
+};
+
+type ManualBookingFormState = {
+  client_id: string;
+  client_name: string;
+  client_phone: string;
+  barber_id: string;
+  service_id: string;
+  date: string;
+  start_time: string;
+  notes: string;
 };
 
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
@@ -251,10 +263,31 @@ export default function DashboardClient({
   const [emailNotifications, setEmailNotifications] = useState(initialEmailNotifications);
   const [pendingWhatsappReminders, setPendingWhatsappReminders] = useState(initialPendingWhatsappReminders);
   const [openingWhatsAppId, setOpeningWhatsAppId] = useState<string | null>(null);
+  const [sendingEmailBookingId, setSendingEmailBookingId] = useState<string | null>(null);
   const [creatingManualBooking, setCreatingManualBooking] = useState(false);
+  const [showManualBookingForm, setShowManualBookingForm] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [reminderChannels, setReminderChannels] = useState<ReminderChannel[]>(() => normalizeReminderChannels(shop.reminder_channels));
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const shopTimeZone = useMemo(() => getTimeZoneForCountry(shopState.country_code || ""), [shopState.country_code]);
+  const todayDateInput = useMemo(() => getCurrentDateInTimeZone(shopTimeZone), [shopTimeZone]);
+  const [manualBookingForm, setManualBookingForm] = useState<ManualBookingFormState>({
+    client_id: "",
+    client_name: "",
+    client_phone: "",
+    barber_id: "",
+    service_id: "",
+    date: todayDateInput,
+    start_time: "",
+    notes: "",
+  });
+
+  useEffect(() => {
+    setManualBookingForm((current) => ({
+      ...current,
+      date: current.date || todayDateInput,
+    }));
+  }, [todayDateInput]);
 
   const clientItems = useMemo(
     () =>
@@ -281,17 +314,17 @@ export default function DashboardClient({
     () => services.filter((service) => service.is_active),
     [services]
   );
-
-  const todayDateInput = useMemo(
-    () => {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    },
-    []
+  const reminderEmailsSentByBooking = useMemo(
+    () =>
+      new Set(
+        emailNotifications
+          .filter((notification) => notification.type === "reminder" && notification.status === "sent" && notification.booking_id)
+          .map((notification) => notification.booking_id as string)
+      ),
+    [emailNotifications]
   );
+  const isEmailEnabled = reminderChannels.includes("email");
+  const isWhatsAppEnabled = reminderChannels.includes("whatsapp");
 
   // Ratings grouped by barber_id
   const ratingsByBarber = useMemo(() => {
@@ -497,12 +530,47 @@ export default function DashboardClient({
     await saveReminderChannels(next);
   }
 
-  async function openWhatsAppReminder(eventId: string) {
-    setOpeningWhatsAppId(eventId);
+  function updateManualBookingField<Key extends keyof ManualBookingFormState>(field: Key, value: ManualBookingFormState[Key]) {
+    setManualBookingForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleManualBookingClientSelect(clientId: string) {
+    const selectedClient = clients.find((client) => client.id === clientId);
+    setManualBookingForm((current) => ({
+      ...current,
+      client_id: clientId,
+      client_name: selectedClient?.name || current.client_name,
+      client_phone: selectedClient?.phone || selectedClient?.whatsapp || current.client_phone,
+    }));
+  }
+
+  async function sendEmailReminder(bookingId: string) {
+    setSendingEmailBookingId(bookingId);
+    const response = await fetch("/api/dashboard/email-notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking_id: bookingId, type: "reminder" }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setSendingEmailBookingId(null);
+
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se pudo enviar el correo", description: payload.error });
+      return;
+    }
+
+    if (payload.notification) {
+      setEmailNotifications((prev) => [payload.notification, ...prev]);
+    }
+    toast({ title: "Correo enviado", description: payload.recipientEmail || "Recordatorio enviado al cliente." });
+  }
+
+  async function openWhatsAppReminder(eventOrBookingId: string, mode: "event" | "booking" = "event") {
+    setOpeningWhatsAppId(eventOrBookingId);
     const response = await fetch("/api/dashboard/whatsapp-reminders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event_id: eventId }),
+      body: JSON.stringify(mode === "event" ? { event_id: eventOrBookingId } : { booking_id: eventOrBookingId }),
     });
     const payload = await response.json().catch(() => ({}));
     setOpeningWhatsAppId(null);
@@ -513,7 +581,9 @@ export default function DashboardClient({
     }
 
     window.open(payload.url, "_blank", "noopener,noreferrer");
-    setPendingWhatsappReminders((prev) => prev.filter((reminder) => reminder.event_id !== eventId));
+    setPendingWhatsappReminders((prev) =>
+      prev.filter((reminder) => reminder.event_id !== payload.event_id && reminder.booking_id !== payload.booking_id)
+    );
     setBookings((prev) =>
       prev.map((booking) => (booking.id === payload.booking_id ? { ...booking, whatsapp_reminder_sent: true } : booking))
     );
@@ -522,14 +592,10 @@ export default function DashboardClient({
 
   async function createManualBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const barberId = String(form.get("barber_id") || "");
-    const serviceId = String(form.get("service_id") || "");
-    const date = String(form.get("date") || "");
-    const startTime = String(form.get("start_time") || "");
-    const clientName = String(form.get("client_name") || "").trim();
-    const clientPhone = String(form.get("client_phone") || "").trim();
-    const notes = String(form.get("notes") || "").trim();
+    const { barber_id: barberId, service_id: serviceId, date, start_time: startTime, client_id: clientId } = manualBookingForm;
+    const clientName = manualBookingForm.client_name.trim();
+    const clientPhone = manualBookingForm.client_phone.trim();
+    const notes = manualBookingForm.notes.trim();
 
     const selectedService = services.find((service) => service.id === serviceId);
     if (!selectedService) {
@@ -554,6 +620,7 @@ export default function DashboardClient({
         date,
         start_time: startTime,
         end_time: addMinutesToTime(startTime, selectedService.duration_min),
+        client_id: clientId || undefined,
         client_name: clientName,
         client_phone: clientPhone || null,
         notes: notes || null,
@@ -570,7 +637,7 @@ export default function DashboardClient({
     setBookings((prev) =>
       [...prev, {
         ...payload,
-        clients: null,
+        clients: clientId ? { name: clientName, phone: clientPhone || null, whatsapp: clientPhone || null } : null,
         barbers: activeBarbers.find((barber) => barber.id === barberId)
           ? { display_name: activeBarbers.find((barber) => barber.id === barberId)!.display_name }
           : null,
@@ -582,7 +649,17 @@ export default function DashboardClient({
       }].sort((a, b) => `${a.date || ""}${a.start_time}`.localeCompare(`${b.date || ""}${b.start_time}`))
     );
 
-    (event.currentTarget as HTMLFormElement).reset();
+    setManualBookingForm({
+      client_id: "",
+      client_name: "",
+      client_phone: "",
+      barber_id: "",
+      service_id: "",
+      date: todayDateInput,
+      start_time: "",
+      notes: "",
+    });
+    setShowManualBookingForm(false);
     toast({ title: "Reserva manual creada" });
   }
 
@@ -731,55 +808,132 @@ export default function DashboardClient({
       {currentTab === "bookings" && (
         <div className="space-y-6">
           <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>Crear reserva manual</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Reservas próximas</CardTitle>
+              <Button
+                type="button"
+                variant={showManualBookingForm ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowManualBookingForm((current) => !current)}
+              >
+                {showManualBookingForm ? "Ocultar formulario" : "Crear reserva manual"}
+              </Button>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={createManualBooking} className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field name="client_name" label="Nombre del cliente" placeholder="Ej: Carlos Peña" required />
-                  <Field name="client_phone" label="Teléfono del cliente" placeholder="+1 809 000 0000" />
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="barber_id">Barbero</Label>
-                    <select id="barber_id" name="barber_id" required className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                      <option value="">Selecciona un barbero</option>
-                      {activeBarbers.map((barber) => (
-                        <option key={barber.id} value={barber.id}>{barber.display_name}</option>
-                      ))}
-                    </select>
+            <CardContent className="space-y-4">
+              {showManualBookingForm && (
+                <form onSubmit={createManualBooking} className="space-y-4 rounded-xl border bg-muted/20 p-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-client-id">Cliente existente</Label>
+                      <select
+                        id="manual-client-id"
+                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        value={manualBookingForm.client_id}
+                        onChange={(event) => handleManualBookingClientSelect(event.target.value)}
+                      >
+                        <option value="">Selecciona uno si ya existe</option>
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.name} · {client.phone || client.whatsapp || "Sin teléfono"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-client-phone">Teléfono del cliente</Label>
+                      <Input
+                        id="manual-client-phone"
+                        value={manualBookingForm.client_phone}
+                        onChange={(event) => updateManualBookingField("client_phone", event.target.value)}
+                        placeholder="+1 809 000 0000"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-client-name">Nombre del cliente</Label>
+                      <Input
+                        id="manual-client-name"
+                        value={manualBookingForm.client_name}
+                        onChange={(event) => updateManualBookingField("client_name", event.target.value)}
+                        placeholder="Ej: Carlos Peña"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-barber">Barbero</Label>
+                      <select
+                        id="manual-barber"
+                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        value={manualBookingForm.barber_id}
+                        onChange={(event) => updateManualBookingField("barber_id", event.target.value)}
+                        required
+                      >
+                        <option value="">Selecciona un barbero</option>
+                        {activeBarbers.map((barber) => (
+                          <option key={barber.id} value={barber.id}>{barber.display_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-service">Servicio</Label>
+                      <select
+                        id="manual-service"
+                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        value={manualBookingForm.service_id}
+                        onChange={(event) => updateManualBookingField("service_id", event.target.value)}
+                        required
+                      >
+                        <option value="">Selecciona un servicio</option>
+                        {activeServices.map((service) => (
+                          <option key={service.id} value={service.id}>
+                            {service.name} · {service.duration_min} min
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="manual-date">Fecha</Label>
+                        <Input
+                          id="manual-date"
+                          type="date"
+                          min={todayDateInput}
+                          value={manualBookingForm.date}
+                          onChange={(event) => updateManualBookingField("date", event.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="manual-start-time">Hora de inicio</Label>
+                        <Input
+                          id="manual-start-time"
+                          type="time"
+                          value={manualBookingForm.start_time}
+                          onChange={(event) => updateManualBookingField("start_time", event.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="service_id">Servicio</Label>
-                    <select id="service_id" name="service_id" required className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                      <option value="">Selecciona un servicio</option>
-                      {activeServices.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.name} · {service.duration_min} min
-                        </option>
-                      ))}
-                    </select>
+                    <Label htmlFor="manual-notes">Notas</Label>
+                    <textarea
+                      id="manual-notes"
+                      value={manualBookingForm.notes}
+                      onChange={(event) => updateManualBookingField("notes", event.target.value)}
+                      placeholder="Observaciones internas de la reserva..."
+                      className="min-h-[90px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
                   </div>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field name="date" label="Fecha" type="date" required min={todayDateInput} />
-                  <Field name="start_time" label="Hora de inicio" type="time" required />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="notes">Notas</Label>
-                  <textarea id="notes" name="notes" placeholder="Observaciones internas de la reserva..." className="min-h-[90px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                </div>
-                <Button type="submit" disabled={creatingManualBooking || activeBarbers.length === 0 || activeServices.length === 0}>
-                  {creatingManualBooking ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</> : "Crear reserva manual"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                  <Button type="submit" disabled={creatingManualBooking || activeBarbers.length === 0 || activeServices.length === 0}>
+                    {creatingManualBooking ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</> : "Guardar reserva manual"}
+                  </Button>
+                </form>
+              )}
 
-          <Card className="shadow-none">
-            <CardHeader><CardTitle>Reservas próximas</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
               {bookings.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas próximas.</p>
               ) : (
@@ -799,17 +953,46 @@ export default function DashboardClient({
                         <span className="text-xs text-muted-foreground">{PAYMENT_STATUS_LABELS[booking.payment_status]}</span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 border-t pt-3">
+                    <div className="flex flex-wrap items-center gap-2 border-t pt-3">
                       {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
                         <Button key={status} size="sm" variant={booking.status === status ? "default" : "outline"} disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)} className="text-xs h-7">
                           {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
                         </Button>
                       ))}
-                      {booking.whatsapp_reminder_sent && (
-                        <span className="ml-auto inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                          WhatsApp preparado
-                        </span>
+                      {booking.status === "confirmed" && isEmailEnabled && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={sendingEmailBookingId === booking.id}
+                          onClick={() => sendEmailReminder(booking.id)}
+                        >
+                          {sendingEmailBookingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : reminderEmailsSentByBooking.has(booking.id) ? "Reenviar correo" : "Enviar correo"}
+                        </Button>
                       )}
+                      {booking.status === "confirmed" && isWhatsAppEnabled && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={openingWhatsAppId === booking.id}
+                          onClick={() => openWhatsAppReminder(booking.id, "booking")}
+                        >
+                          {openingWhatsAppId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : booking.whatsapp_reminder_sent ? "Reabrir WhatsApp" : "Enviar WhatsApp"}
+                        </Button>
+                      )}
+                      <div className="ml-auto flex flex-wrap items-center gap-2">
+                        {reminderEmailsSentByBooking.has(booking.id) && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            Correo enviado
+                          </span>
+                        )}
+                        {booking.whatsapp_reminder_sent && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            WhatsApp enviado
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1007,9 +1190,9 @@ export default function DashboardClient({
                 <Mail className="h-4 w-4 text-primary" /> Canales de recordatorio
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                La barbería puede trabajar con correo, WhatsApp o ambos. El correo sale automáticamente por cron. WhatsApp se abre en WhatsApp Web con el mensaje listo.
+            <CardContent className="space-y-2 pt-0">
+              <p className="text-xs text-muted-foreground">
+                Correo sale automático una vez al día en Vercel Hobby. WhatsApp queda manual desde el dashboard.
               </p>
               <div className="flex flex-wrap gap-2">
                 {(["email", "whatsapp"] as ReminderChannel[]).map((channel) => {
@@ -1019,6 +1202,7 @@ export default function DashboardClient({
                       key={channel}
                       type="button"
                       variant={isActive ? "default" : "outline"}
+                      size="sm"
                       className="gap-2"
                       onClick={() => toggleReminderChannel(channel)}
                     >
@@ -1142,7 +1326,7 @@ export default function DashboardClient({
           <Card className="shadow-none">
             <CardHeader><CardTitle>Detalles de la cuenta</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <InfoRow label="URL pública" value={`ibarber.app/${shopState.slug}`} />
+              <InfoRow label="URL pública" value={buildAppUrl(`/${shopState.slug}`)} />
               <InfoRow label="Ciudad" value={shopState.city ? `${shopState.city}, ${shopState.country_name}` : "No especificada"} />
               <InfoRow label="Pagos online" value={shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"} />
             </CardContent>

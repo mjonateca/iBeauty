@@ -5,7 +5,10 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { buildWhatsAppReminderUrl } from "@/lib/notifications";
 
 const requestSchema = z.object({
-  event_id: z.string().uuid(),
+  event_id: z.string().uuid().optional(),
+  booking_id: z.string().uuid().optional(),
+}).refine((value) => value.event_id || value.booking_id, {
+  message: "Datos inválidos",
 });
 
 export async function POST(request: Request) {
@@ -19,22 +22,23 @@ export async function POST(request: Request) {
 
   const admin = await createAdminClient();
 
-  const { data: event } = await admin
-    .from("notification_events")
-    .select("id, booking_id, shop_id, channel, type, status")
-    .eq("id", parsed.data.event_id)
-    .eq("shop_id", context.shop.id)
-    .eq("channel", "whatsapp")
-    .single();
+  const { data: event } = parsed.data.event_id
+    ? await admin
+        .from("notification_events")
+        .select("id, booking_id, shop_id, channel, type, status")
+        .eq("id", parsed.data.event_id)
+        .eq("shop_id", context.shop.id)
+        .eq("channel", "whatsapp")
+        .single()
+    : { data: null };
 
-  if (!event?.booking_id) {
-    return NextResponse.json({ error: "Recordatorio no encontrado" }, { status: 404 });
-  }
+  const bookingId = event?.booking_id || parsed.data.booking_id;
+  if (!bookingId) return NextResponse.json({ error: "Recordatorio no encontrado" }, { status: 404 });
 
   const { data: booking } = await admin
     .from("bookings")
     .select("id, date, start_time, client_phone, clients(name, phone, whatsapp), barbers(display_name), services(name)")
-    .eq("id", event.booking_id)
+    .eq("id", bookingId)
     .eq("shop_id", context.shop.id)
     .single();
 
@@ -57,23 +61,27 @@ export async function POST(request: Request) {
   });
 
   if (!url) {
-    await admin
-      .from("notification_events")
-      .update({ status: "failed", error: "El cliente no tiene un número válido para WhatsApp" })
-      .eq("id", event.id);
+    if (event?.id) {
+      await admin
+        .from("notification_events")
+        .update({ status: "failed", error: "El cliente no tiene un número válido para WhatsApp" })
+        .eq("id", event.id);
+    }
 
     return NextResponse.json({ error: "El cliente no tiene un número válido para WhatsApp" }, { status: 400 });
   }
 
-  await admin.from("notification_events").update({
-    status: "sent",
-    sent_at: new Date().toISOString(),
-    error: null,
-  }).eq("id", event.id);
+  if (event?.id) {
+    await admin.from("notification_events").update({
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      error: null,
+    }).eq("id", event.id);
+  }
 
   await admin.from("bookings").update({
     whatsapp_reminder_sent: true,
   }).eq("id", booking.id);
 
-  return NextResponse.json({ success: true, url, booking_id: booking.id, event_id: event.id });
+  return NextResponse.json({ success: true, url, booking_id: booking.id, event_id: event?.id || null });
 }

@@ -32,6 +32,66 @@ export function formatTime(time: string): string {
   return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
 }
 
+function getDatePartsInTimeZone(date: Date, timeZone: string) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const getPart = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  return {
+    year: getPart("year"),
+    month: getPart("month"),
+    day: getPart("day"),
+    hour: getPart("hour"),
+    minute: getPart("minute"),
+  };
+}
+
+export function parseDateOnly(value: string): Date {
+  return new Date(`${value}T12:00:00`);
+}
+
+export function getCurrentDateInTimeZone(timeZone: string, now = new Date()): string {
+  const { year, month, day } = getDatePartsInTimeZone(now, timeZone);
+  return `${year}-${month}-${day}`;
+}
+
+export function getCurrentTimeInTimeZone(timeZone: string, now = new Date()): string {
+  const { hour, minute } = getDatePartsInTimeZone(now, timeZone);
+  return `${hour}:${minute}`;
+}
+
+export function addDaysToDateString(value: string, days: number): string {
+  const date = parseDateOnly(value);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatLongDateInTimeZone(timeZone: string, now = new Date(), locale = "es-DO"): string {
+  const formatted = new Intl.DateTimeFormat(locale, {
+    timeZone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(now);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+export function getAppBaseUrl(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL || "https://i-barber.com").replace(/\/+$/, "");
+}
+
+export function buildAppUrl(path = "/"): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${getAppBaseUrl()}${normalizedPath}`;
+}
+
 export function normalizeMapsUrl(value: string | null | undefined): string | null {
   const raw = value?.trim();
   if (!raw) return null;
