@@ -117,6 +117,14 @@ export async function POST(request: Request) {
     .single();
 
   if (!booking) return NextResponse.json({ error: "Reserva no encontrada" }, { status: 404 });
+  const { data: shopData } = await admin
+  .from("shops")
+  .select("name, slug")
+  .eq("id", context.shop.id)
+  .single();
+
+const shopName = shopData?.name || "iBarber";
+const shopSlug = shopData?.slug || "";
 
   const { data: clientData } = await admin
     .from("clients")
@@ -147,21 +155,28 @@ export async function POST(request: Request) {
     const barberName = (booking.barbers as unknown as { display_name: string } | null)?.display_name || "Tu barbero";
     const serviceName = (booking.services as unknown as { name: string } | null)?.name || "Servicio";
     const subject = LABELS[parsed.data.type] || "Notificación de iBarber";
+    const { data: shopData } = await admin
+  .from("shops")
+  .select("name, slug")
+  .eq("id", context.shop.id)
+  .single();
+
+const shopName = shopData?.name || "iBarber";
+const shopSlug = shopData?.slug || "";
 
     const html = buildEmailHtml({
       type: parsed.data.type,
       clientName: recipientName,
-      shopName: (context.shop as unknown as { name?: string; slug?: string }).name || "iBarber",
+      shopName,
       barberName,
       serviceName,
       date: booking.date as string,
       startTime: booking.start_time as string,
-      shopSlug: (context.shop as unknown as { name: string; slug: string }).slug,
+      shopSlug,
     });
 
     const result = await resend.emails.send({
-from: `${(context.shop as unknown as { name?: string; slug?: string }).name || "iBarber"} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,      to: recipientEmail,
-      subject,
+    from: `${shopName} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,      subject,
       html,
     });
 
