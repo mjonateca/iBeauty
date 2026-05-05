@@ -157,7 +157,7 @@ export default async function HomePage({ searchParams }: Props) {
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.08] tracking-tight mb-5">
                 Tu salón de belleza<br />
-                favorita,{" "}
+                favorito,{" "}
                 <span style={{ color: "hsl(44, 94%, 60%)" }}>
                   a un clic
                 </span>

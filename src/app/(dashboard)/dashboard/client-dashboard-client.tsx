@@ -199,7 +199,7 @@ export default function ClientDashboardClient({
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <Metric title="Reservas" value={bookings.length} />
-        <Metric title="Salón de bellezas favoritas" value={shopFavorites.size} />
+        <Metric title="Salones de belleza favoritos" value={shopFavorites.size} />
         <Metric title="Estilistas favoritos" value={barberFavorites.size} />
       </div>
 
@@ -221,7 +221,7 @@ export default function ClientDashboardClient({
       {currentTab === "summary" && (
         <Card className="shadow-none">
           <CardHeader>
-            <CardTitle>Salón de bellezas cerca de tu zona</CardTitle>
+            <CardTitle>Salones de belleza cerca de tu zona</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {shops.length === 0 ? (
@@ -349,11 +349,11 @@ export default function ClientDashboardClient({
         <div className="grid gap-5 lg:grid-cols-2">
           <Card className="shadow-none">
             <CardHeader>
-              <CardTitle>Salón de bellezas favoritas</CardTitle>
+              <CardTitle>Salones de belleza favoritos</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {favoriteShops.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Todavía no has marcado salones de belleza favoritas.</p>
+                <p className="text-sm text-muted-foreground">Todavía no has marcado salones de belleza favoritos.</p>
               ) : (
                 favoriteShops.map((shop) => (
                   <div key={shop.id} className="rounded-lg border p-4">
