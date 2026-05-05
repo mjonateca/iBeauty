@@ -1,12 +1,12 @@
 {
   "name": "iBeauty",
   "short_name": "iBeauty",
-  "description": "Reserva citas en las mejores salones de belleza de República Dominicana",
+  "description": "Reserva citas en los mejores salones de belleza",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#de2163",
+  "theme_color": "#b7791f",
   "categories": ["lifestyle", "business"],
   "icons": [
     {

@@ -12,7 +12,7 @@ const updateSchema = z.object({
   service_ids: z.array(z.string().uuid()).optional(),
 });
 
-async function assertBarberOwner(id: string) {
+async function assertBeautyOwner(id: string) {
   const context = await getAuthenticatedContext();
   if (context.response) return { ...context, barber: null };
 
@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Datos inválidos", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const context = await assertBarberOwner(id);
+  const context = await assertBeautyOwner(id);
   if (context.response) return context.response;
   const admin = await createAdminClient();
 
@@ -80,7 +80,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const context = await assertBarberOwner(id);
+  const context = await assertBeautyOwner(id);
   if (context.response) return context.response;
   const admin = await createAdminClient();
 

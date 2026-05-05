@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { formatCurrency, formatTime } from "@/lib/utils";
+import { formatCurrency, formatTime, getCurrentDateInTimeZone, getCurrentTimeInTimeZone, parseDateOnly } from "@/lib/utils";
+import { getTimeZoneForCountry } from "@/lib/locations";
 import type { Barber, Client, Service, Shop } from "@/types/database";
 
 interface ShopWithRelations extends Shop {
@@ -28,8 +29,9 @@ type Step = "barber" | "service" | "datetime" | "confirm" | "success";
 type BookedInterval = { start: string; end: string };
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
 
-function generateDates(days = 14): Date[] {
-  return Array.from({ length: days }, (_, i) => addDays(startOfDay(new Date()), i));
+function generateDates(timeZone: string, days = 14): Date[] {
+  const startDate = startOfDay(parseDateOnly(getCurrentDateInTimeZone(timeZone)));
+  return Array.from({ length: days }, (_, i) => addDays(startDate, i));
 }
 
 function timeToMinutes(value: string) {
@@ -43,6 +45,14 @@ function minutesToTime(total: number) {
     .padStart(2, "0");
   const minutes = (total % 60).toString().padStart(2, "0");
   return `${hours}:${minutes}`;
+}
+
+function ceilToHalfHour(total: number) {
+  return Math.ceil(total / 30) * 30;
+}
+
+function floorToHalfHour(total: number) {
+  return Math.floor(total / 30) * 30;
 }
 
 function intervalsOverlap(start: string, end: string, booked: BookedInterval) {
@@ -91,8 +101,8 @@ function buildSlots(date: Date, openingHours: OpeningHoursValue, duration = 30) 
   const dayConfig = openingHours[weekdayKey(date)];
   if (!dayConfig || dayConfig.closed) return [];
 
-  const start = timeToMinutes(dayConfig.open);
-  const end = timeToMinutes(dayConfig.close);
+  const start = ceilToHalfHour(timeToMinutes(dayConfig.open));
+  const end = floorToHalfHour(timeToMinutes(dayConfig.close));
   const slots: string[] = [];
 
   for (let minute = start; minute + duration <= end; minute += 30) {
@@ -103,6 +113,7 @@ function buildSlots(date: Date, openingHours: OpeningHoursValue, duration = 30) 
 }
 
 export default function BookingFlow({ shop, client, preselectedBarberId }: Props) {
+  const shopTimeZone = useMemo(() => getTimeZoneForCountry(shop.country_code || ""), [shop.country_code]);
   const activeBarbers = shop.barbers.filter((barber) => barber.is_active !== false);
   const openingHours = useMemo(() => normalizeOpeningHours(shop.opening_hours), [shop.opening_hours]);
   const preselectedBarber = preselectedBarberId ? activeBarbers.find((barber) => barber.id === preselectedBarberId) || null : null;
@@ -120,7 +131,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
   const activeServices = shop.services.filter(
     (service) => service.is_active && service.is_visible !== false && (!selectedBarber || compatibleServiceIds.size === 0 || compatibleServiceIds.has(service.id))
   );
-  const dates = generateDates(14);
+  const dates = useMemo(() => generateDates(shopTimeZone, 14), [shopTimeZone]);
   const availableSlots = selectedDate ? buildSlots(selectedDate, openingHours, selectedService?.duration_min || 30) : [];
   const selectedDayConfig = selectedDate ? openingHours[weekdayKey(selectedDate)] : null;
 
@@ -204,7 +215,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
   if (step === "success") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[hsl(var(--muted))] px-4 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
           <CheckCircle2 className="h-11 w-11" />
         </div>
         <h1 className="mb-2 text-2xl font-bold">¡Reserva confirmada!</h1>
@@ -292,7 +303,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
             <h2 className="text-lg font-semibold">¿Con quién quieres tu cita?</h2>
             {activeBarbers.length === 0 ? (
               <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-                Esta salón de belleza aún no tiene estilistas activos para recibir reservas.
+                Este salón de belleza aún no tiene estilistas activos para recibir reservas.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -413,7 +424,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
               <div>
                 <h3 className="mb-3 font-medium">Horarios disponibles</h3>
                 {selectedDayConfig?.closed ? (
-                  <p className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">La salón de belleza está cerrada ese día.</p>
+                  <p className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">El salón de belleza está cerrada ese día.</p>
                 ) : loadingSlots ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -428,8 +439,9 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                       const duration = selectedService?.duration_min || 30;
                       const slotEnd = minutesToTime(timeToMinutes(slot) + duration);
                       const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
-                      const todayStr = format(new Date(), "yyyy-MM-dd");
-                      const inPast = dateStr === todayStr && timeToMinutes(slot) <= timeToMinutes(format(new Date(), "HH:mm"));
+                      const todayStr = getCurrentDateInTimeZone(shopTimeZone);
+                      const currentTime = getCurrentTimeInTimeZone(shopTimeZone);
+                      const inPast = dateStr === todayStr && timeToMinutes(slot) <= timeToMinutes(currentTime);
                       const taken = inPast || bookedSlots.some((booked) => intervalsOverlap(slot, slotEnd, booked));
 
                       return (
@@ -507,8 +519,8 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                 {shop.payments_enabled && (
                   <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                     {shop.online_payment_mode === "required"
-                      ? "Esta salón de belleza tiene pago online obligatorio. Después de reservar podrás completar el pago desde tu panel."
-                      : "Esta salón de belleza admite pago online. Después de reservar podrás pagar desde tu panel si quieres dejarla abonada."}
+                      ? "Este salón de belleza tiene pago online obligatorio. Después de reservar podrás completar el pago desde tu panel."
+                      : "Este salón de belleza admite pago online. Después de reservar podrás pagar desde tu panel si quieres dejarla abonada."}
                   </div>
                 )}
               </CardContent>

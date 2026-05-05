@@ -9,7 +9,7 @@ test("defaults legacy accounts with unknown metadata to client role", () => {
   const role = determineAccountRole({
     profileRole: null,
     hasClient: false,
-    hasBarber: false,
+    hasBeauty: false,
     hasShop: false,
     metadata: { role: "admin", name: "MJ Calvo" },
   });
@@ -21,7 +21,7 @@ test("prefers existing business records over stale metadata", () => {
   const role = determineAccountRole({
     profileRole: null,
     hasClient: false,
-    hasBarber: false,
+    hasBeauty: false,
     hasShop: true,
     metadata: { account_type: "client" },
   });

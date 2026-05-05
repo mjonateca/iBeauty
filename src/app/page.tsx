@@ -1,10 +1,10 @@
 import Link from "next/link";
 import {
   MapPin,
-  Sparkles,
   Search,
   CalendarCheck,
   Star,
+  Sparkles,
   ArrowRight,
   CheckCircle2,
   Zap,
@@ -37,9 +37,9 @@ type ListedShop = {
 
 export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams;
-  const selectedCountry = params.country || "DO";
-  const selectedCity = params.city || "Santo Domingo";
-  const cities = getCitiesForCountry(selectedCountry);
+  const selectedCountry = params.country || "";
+  const selectedCity = params.city || "";
+  const cities = selectedCountry ? getCitiesForCountry(selectedCountry) : [];
 
   let shops: ListedShop[] = [];
 
@@ -52,21 +52,25 @@ export default async function HomePage({ searchParams }: Props) {
       .select("*")
       .order("city", { ascending: true })
       .order("name", { ascending: true })
-      .limit(24);
+      .limit(48);
 
     const all = (data || []) as ListedShop[];
     const active = all.filter((shop) => shop.is_active !== false);
-    const countryMatches = active.filter(
-      (shop) => !shop.country_code || shop.country_code === selectedCountry
-    );
-    shops = [
-      ...countryMatches.filter(
-        (shop) => shop.city?.toLowerCase() === selectedCity.toLowerCase()
-      ),
-      ...countryMatches.filter(
-        (shop) => shop.city?.toLowerCase() !== selectedCity.toLowerCase()
-      ),
-    ];
+    if (selectedCountry) {
+      const countryMatches = active.filter(
+        (shop) => !shop.country_code || shop.country_code === selectedCountry
+      );
+      if (selectedCity) {
+        shops = [
+          ...countryMatches.filter((shop) => shop.city?.toLowerCase() === selectedCity.toLowerCase()),
+          ...countryMatches.filter((shop) => shop.city?.toLowerCase() !== selectedCity.toLowerCase()),
+        ];
+      } else {
+        shops = countryMatches;
+      }
+    } else {
+      shops = active;
+    }
   }
 
   return (
@@ -79,7 +83,7 @@ export default async function HomePage({ searchParams }: Props) {
               className="rounded-xl p-2 shadow-md group-hover:shadow-lg transition-shadow"
               style={{
                 background:
-                  "linear-gradient(135deg, hsl(174,72%,28%), hsl(174,60%,38%))",
+                  "linear-gradient(135deg, hsl(38,85%,36%), hsl(38,78%,48%))",
               }}
             >
               <Sparkles className="h-5 w-5 text-white" />
@@ -89,7 +93,7 @@ export default async function HomePage({ searchParams }: Props) {
                 iBeauty
               </span>
               <span className="text-[10px] text-muted-foreground font-medium tracking-wide hidden sm:block">
-                RepÃºblica Dominicana
+                Agenda online global
               </span>
             </div>
           </Link>
@@ -100,7 +104,7 @@ export default async function HomePage({ searchParams }: Props) {
               size="sm"
               className="font-medium text-muted-foreground hover:text-foreground"
             >
-              <Link href="/login">Iniciar sesiÃ³n</Link>
+              <Link href="/login">Iniciar sesión</Link>
             </Button>
             <Button
               asChild
@@ -108,7 +112,7 @@ export default async function HomePage({ searchParams }: Props) {
               className="font-bold px-4 shadow-md border-0"
               style={{
                 background:
-                  "linear-gradient(135deg, hsl(174,72%,30%), hsl(174,60%,40%))",
+                  "linear-gradient(135deg, hsl(38,85%,40%), hsl(38,78%,50%))",
               }}
             >
               <Link href="/register">Crear cuenta</Link>
@@ -122,7 +126,7 @@ export default async function HomePage({ searchParams }: Props) {
         className="relative overflow-hidden"
         style={{
           background:
-            "linear-gradient(135deg, hsl(174,72%,10%) 0%, hsl(174,65%,16%) 40%, hsl(200,55%,12%) 100%)",
+            "linear-gradient(135deg, hsl(35,46%,12%) 0%, hsl(36,52%,18%) 40%, hsl(25,42%,12%) 100%)",
         }}
       >
         <div
@@ -139,7 +143,7 @@ export default async function HomePage({ searchParams }: Props) {
         />
         <div
           className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full opacity-15 blur-3xl pointer-events-none"
-          style={{ background: "hsl(174, 72%, 50%)" }}
+          style={{ background: "hsl(38, 82%, 52%)" }}
         />
 
         <div className="relative max-w-6xl mx-auto px-4 pt-16 pb-20 md:pt-24 md:pb-32">
@@ -147,12 +151,12 @@ export default async function HomePage({ searchParams }: Props) {
             {/* Left */}
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white/90 mb-6 backdrop-blur-sm">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
-                Plataforma #1 en RD
+                <Zap className="h-3.5 w-3.5 text-amber-400" />
+                Descubre salones de belleza activos
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.08] tracking-tight mb-5">
-                Tu salÃ³n de belleza<br />
+                Tu salón de belleza<br />
                 favorita,{" "}
                 <span style={{ color: "hsl(44, 94%, 60%)" }}>
                   a un clic
@@ -160,14 +164,13 @@ export default async function HomePage({ searchParams }: Props) {
               </h1>
 
               <p className="text-white/65 text-lg mb-8 leading-relaxed max-w-md">
-                Encuentra las mejores salÃ³n de bellezas de RepÃºblica Dominicana, elige
-                tu estilista y reserva en segundos. Sin llamadas, sin esperas.
+                Encuentra salones de belleza por país y ciudad, elige tu profesional y reserva en segundos. Sin llamadas, sin esperas.
               </p>
 
               <div className="flex flex-wrap gap-x-5 gap-y-2 mb-10">
                 {[
                   "Sin comisiones",
-                  "ConfirmaciÃ³n instantÃ¡nea",
+                  "Confirmación instantánea",
                   "100% gratis para clientes",
                 ].map((text) => (
                   <div key={text} className="flex items-center gap-1.5 text-white/65 text-sm">
@@ -179,7 +182,7 @@ export default async function HomePage({ searchParams }: Props) {
 
               <div className="bg-white/8 backdrop-blur-xl border border-white/15 rounded-2xl p-4 shadow-2xl">
                 <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-3 ml-1">
-                  Busca en tu ciudad
+                  Busca por país y ciudad
                 </p>
                 <form className="flex flex-col sm:flex-row gap-2.5">
                   <select
@@ -188,6 +191,7 @@ export default async function HomePage({ searchParams }: Props) {
                     className="flex-1 h-11 rounded-xl border border-white/15 bg-white/10 px-3.5 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     style={{ colorScheme: "dark" }}
                   >
+                    <option value="" className="bg-slate-900 text-white">Todos los países</option>
                     {COUNTRIES.map((country) => (
                       <option key={country.code} value={country.code} className="bg-slate-900 text-white">
                         {country.name}
@@ -200,6 +204,9 @@ export default async function HomePage({ searchParams }: Props) {
                     className="flex-1 h-11 rounded-xl border border-white/15 bg-white/10 px-3.5 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     style={{ colorScheme: "dark" }}
                   >
+                    <option value="" className="bg-slate-900 text-white">
+                      {selectedCountry ? "Todas las ciudades" : "Selecciona un país primero"}
+                    </option>
                     {cities.map((city) => (
                       <option key={city} value={city} className="bg-slate-900 text-white">{city}</option>
                     ))}
@@ -216,33 +223,33 @@ export default async function HomePage({ searchParams }: Props) {
               </div>
             </div>
 
-            {/* Right â decorative preview card */}
+            {/* Right preview card */}
             <div className="hidden md:flex items-center justify-center">
               <div className="relative w-full max-w-sm">
                 <div className="rounded-2xl border border-white/15 bg-white/8 backdrop-blur-xl p-6 shadow-2xl">
                   <div className="flex items-center gap-3 mb-5">
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg"
-                      style={{ background: "linear-gradient(135deg, hsl(174,72%,28%), hsl(174,55%,42%))" }}
+                      style={{ background: "linear-gradient(135deg, hsl(38,85%,36%), hsl(38,76%,46%))" }}
                     >
                       B
                     </div>
                     <div>
-                      <p className="text-white font-bold text-sm">SalÃ³n de belleza Premium</p>
+                      <p className="text-white font-bold text-sm">Salón de belleza Premium</p>
                       <p className="text-white/50 text-xs flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> Santo Domingo
+                        <MapPin className="h-3 w-3" /> tu próxima cita
                       </p>
                     </div>
-                    <div className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                    <div className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                       Abierto
                     </div>
                   </div>
                   <div className="space-y-2.5 mb-5">
                     {[
-                      { name: "Corte clÃ¡sico", price: "RD$350", time: "30 min" },
-                      { name: "Fade + barba", price: "RD$550", time: "45 min" },
-                      { name: "DiseÃ±o completo", price: "RD$750", time: "60 min" },
+                      { name: "Peinado y styling", price: "$350", time: "30 min" },
+                      { name: "Manicura + pedicura", price: "$550", time: "45 min" },
+                      { name: "Coloración completa", price: "$750", time: "60 min" },
                     ].map((s) => (
                       <div key={s.name} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5">
                         <span className="text-white/85 text-sm font-medium">{s.name}</span>
@@ -259,7 +266,7 @@ export default async function HomePage({ searchParams }: Props) {
                     className="w-full py-2.5 rounded-xl text-center font-bold text-sm shadow-md cursor-pointer"
                     style={{ background: "hsl(44,94%,52%)", color: "#0d1117" }}
                   >
-                    Reservar cita â
+                    Reservar cita →
                   </div>
                 </div>
                 {/* Floating badge */}
@@ -269,7 +276,7 @@ export default async function HomePage({ searchParams }: Props) {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800">Reserva confirmada</p>
-                    <p className="text-[10px] text-slate-500">Hoy Â· 3:00 PM</p>
+                    <p className="text-[10px] text-slate-500">Hoy · 3:00 PM</p>
                   </div>
                 </div>
               </div>
@@ -282,14 +289,14 @@ export default async function HomePage({ searchParams }: Props) {
       <section className="border-b bg-card">
         <div className="max-w-6xl mx-auto px-4 py-5 grid grid-cols-3 divide-x divide-border">
           {[
-            { icon: Sparkles, value: shops.length > 0 ? `${shops.length}+` : "10+", label: "SalÃ³n de bellezas activas" },
+            { icon: Sparkles, value: shops.length > 0 ? `${shops.length}+` : "10+", label: "salones de belleza activos" },
             { icon: Users, value: "500+", label: "Clientes atendidos" },
             { icon: Clock, value: "24/7", label: "Reservas online" },
           ].map(({ icon: Icon, value, label }) => (
             <div key={label} className="text-center px-4 py-1">
               <div className="flex items-center justify-center gap-2 mb-0.5">
-                <Icon className="h-4 w-4" style={{ color: "hsl(174,72%,34%)" }} />
-                <p className="text-2xl md:text-3xl font-black" style={{ color: "hsl(174,72%,34%)" }}>
+                <Icon className="h-4 w-4" style={{ color: "hsl(38,85%,44%)" }} />
+                <p className="text-2xl md:text-3xl font-black" style={{ color: "hsl(38,85%,44%)" }}>
                   {value}
                 </p>
               </div>
@@ -299,40 +306,40 @@ export default async function HomePage({ searchParams }: Props) {
         </div>
       </section>
 
-      {/* CÃMO FUNCIONA */}
+      {/* CÓMO FUNCIONA */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "hsl(174,72%,34%)" }}>
+            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "hsl(38,85%,44%)" }}>
               Proceso simple
             </p>
-            <h2 className="text-3xl md:text-4xl font-black text-foreground">Â¿CÃ³mo funciona?</h2>
+            <h2 className="text-3xl md:text-4xl font-black text-foreground">¿Cómo funciona?</h2>
             <p className="text-muted-foreground mt-3 max-w-md mx-auto">
-              Reserva tu prÃ³ximo corte en menos de 2 minutos
+              Reserva tu próxima cita en menos de 2 minutos
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
             {[
-              { step: "01", icon: Search, title: "Busca tu salÃ³n de belleza", desc: "Filtra por ciudad y encuentra la salÃ³n de belleza perfecta cerca de ti." },
-              { step: "02", icon: CalendarCheck, title: "Elige estilista y hora", desc: "Selecciona tu estilista favorito y el horario disponible que mÃ¡s te convenga." },
-              { step: "03", icon: Star, title: "Disfruta tu cita", desc: "Recibe confirmaciÃ³n al instante y llega a tu cita sin esperas." },
+              { step: "01", icon: Search, title: "Busca tu salón de belleza", desc: "Filtra por ciudad y encuentra el salón de belleza perfecto cerca de ti." },
+              { step: "02", icon: CalendarCheck, title: "Elige profesional y hora", desc: "Selecciona tu profesional favorito y el horario disponible que más te convenga." },
+              { step: "03", icon: Star, title: "Disfruta tu cita", desc: "Recibe confirmación al instante y llega a tu cita sin esperas." },
             ].map(({ step, icon: Icon, title, desc }) => (
               <div key={step} className="relative rounded-2xl border bg-card p-7 hover:border-primary/30 hover:shadow-lg transition-all duration-300 group">
                 <div className="flex items-start justify-between mb-5">
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
-                    style={{ background: "hsl(174,72%,96%)", color: "hsl(174,72%,34%)" }}
+                    style={{ background: "hsl(43,100%,96%)", color: "hsl(38,85%,44%)" }}
                   >
                     <Icon className="h-6 w-6" />
                   </div>
-                  <span className="text-5xl font-black select-none opacity-8 group-hover:opacity-15 transition-opacity" style={{ color: "hsl(174,72%,34%)" }}>
+                  <span className="text-5xl font-black select-none opacity-8 group-hover:opacity-15 transition-opacity" style={{ color: "hsl(38,85%,44%)" }}>
                     {step}
                   </span>
                 </div>
                 <h3 className="font-bold text-lg mb-2 text-foreground">{title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
-                <div className="mt-4 flex items-center gap-1 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "hsl(174,72%,34%)" }}>
+                <div className="mt-4 flex items-center gap-1 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "hsl(38,85%,44%)" }}>
                   Empezar <ChevronRight className="h-3.5 w-3.5" />
                 </div>
               </div>
@@ -342,38 +349,44 @@ export default async function HomePage({ searchParams }: Props) {
       </section>
 
       {/* LISTINGS */}
-      <section className="py-14 px-4" style={{ background: "hsl(174,30%,97%)" }}>
+      <section className="py-14 px-4" style={{ background: "hsl(43,70%,97%)" }}>
         <div className="max-w-6xl mx-auto">
           <div className="flex items-end justify-between gap-4 mb-10">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "hsl(174,72%,34%)" }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "hsl(38,85%,44%)" }}>
                 Disponibles ahora
               </p>
-              <h2 className="text-2xl font-black text-foreground">SalÃ³n de bellezas en {selectedCity}</h2>
+              <h2 className="text-2xl font-black text-foreground">
+                {selectedCity
+                  ? `salones de belleza en ${selectedCity}`
+                  : selectedCountry
+                    ? `salones de belleza en ${COUNTRIES.find((country) => country.code === selectedCountry)?.name || "tu país"}`
+                    : "salones de belleza disponibles"}
+              </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {shops.length > 0
                   ? `${shops.length} establecimiento${shops.length > 1 ? "s" : ""} verificado${shops.length > 1 ? "s" : ""}`
-                  : "Sin establecimientos en esta zona aÃºn"}
+                  : "Sin establecimientos en esta búsqueda todavía"}
               </p>
             </div>
             <Link
               href="/register"
               className="hidden sm:flex items-center gap-1.5 text-sm font-bold hover:underline underline-offset-4 transition-colors"
-              style={{ color: "hsl(174,72%,34%)" }}
+              style={{ color: "hsl(38,85%,44%)" }}
             >
-              Registrar mi salÃ³n de belleza <ArrowRight className="h-4 w-4" />
+              Registrar mi salón de belleza <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
           {shops.length === 0 ? (
             <div className="rounded-2xl border bg-card p-14 text-center shadow-sm">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "hsl(174,30%,93%)" }}>
-                <Sparkles className="h-8 w-8" style={{ color: "hsl(174,72%,34%)" }} />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "hsl(43,75%,92%)" }}>
+                <Sparkles className="h-8 w-8" style={{ color: "hsl(38,85%,44%)" }} />
               </div>
-              <p className="font-bold text-lg mb-1">No hay salÃ³n de bellezas activas aquÃ­</p>
-              <p className="text-sm text-muted-foreground mb-5">Prueba con otra ciudad o regresa pronto.</p>
-              <Link href="/register" className="inline-flex items-center gap-1.5 text-sm font-bold hover:underline underline-offset-4" style={{ color: "hsl(174,72%,34%)" }}>
-                Â¿Tienes una salÃ³n de belleza? RegÃ­strala gratis â
+              <p className="font-bold text-lg mb-1">No hay salones de belleza activos aquí</p>
+              <p className="text-sm text-muted-foreground mb-5">Prueba con otro país, otra ciudad o regresa pronto.</p>
+              <Link href="/register" className="inline-flex items-center gap-1.5 text-sm font-bold hover:underline underline-offset-4" style={{ color: "hsl(38,85%,44%)" }}>
+                ¿Tienes un salón de belleza? Regístralo gratis →
               </Link>
             </div>
           ) : (
@@ -389,7 +402,7 @@ export default async function HomePage({ searchParams }: Props) {
                     {/* Card header */}
                     <div
                       className="h-28 relative overflow-hidden flex-shrink-0"
-                      style={{ background: "linear-gradient(135deg, hsl(174,72%,18%) 0%, hsl(174,60%,28%) 50%, hsl(200,55%,22%) 100%)" }}
+                      style={{ background: "linear-gradient(135deg, hsl(35,50%,18%) 0%, hsl(36,60%,28%) 50%, hsl(25,42%,22%) 100%)" }}
                     >
                       <div
                         className="absolute inset-0 opacity-[0.08]"
@@ -401,14 +414,14 @@ export default async function HomePage({ searchParams }: Props) {
                       <div className="absolute bottom-0 left-5 translate-y-1/2">
                         <div
                           className="w-14 h-14 rounded-xl border-2 border-white flex items-center justify-center text-lg font-black text-white shadow-lg"
-                          style={{ background: "linear-gradient(135deg, hsl(174,72%,24%), hsl(174,60%,36%))" }}
+                          style={{ background: "linear-gradient(135deg, hsl(38,80%,32%), hsl(38,78%,46%))" }}
                         >
                           {initials}
                         </div>
                       </div>
                       <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/30 backdrop-blur-sm">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                        Activa
+                        Activo
                       </div>
                     </div>
 
@@ -418,7 +431,7 @@ export default async function HomePage({ searchParams }: Props) {
                         <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors leading-tight">{shop.name}</h3>
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{shop.city || "Ciudad"}{shop.country_name ? ` Â· ${shop.country_name}` : ""}</span>
+                          <span className="truncate">{shop.city || "Ciudad"}{shop.country_name ? ` · ${shop.country_name}` : ""}</span>
                         </p>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed flex-1">
@@ -430,7 +443,7 @@ export default async function HomePage({ searchParams }: Props) {
                           <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                         </span>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                           <span className="font-medium">Nuevo</span>
                         </div>
                       </div>
@@ -443,20 +456,20 @@ export default async function HomePage({ searchParams }: Props) {
         </div>
       </section>
 
-      {/* WHY IBEAUTY */}
+      {/* WHY IBARBER */}
       <section className="py-20 px-4 bg-card">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "hsl(174,72%,34%)" }}>
-              Por quÃ© iBeauty
+            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "hsl(38,85%,44%)" }}>
+              Por qué iBeauty
             </p>
             <h2 className="text-3xl md:text-4xl font-black text-foreground">Todo lo que necesitas</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-3">
             {[
               { icon: Zap, title: "Reserva en segundos", desc: "Sin llamadas, sin WhatsApp. Elige hora disponible y confirma al instante.", accent: "hsl(44,94%,50%)", bg: "hsl(44,94%,96%)" },
-              { icon: Shield, title: "Sin comisiones", desc: "No cobramos comisiÃ³n por cita. El 100% del pago va directo a la salÃ³n de belleza.", accent: "hsl(174,72%,34%)", bg: "hsl(174,72%,96%)" },
-              { icon: TrendingUp, title: "GestiÃ³n inteligente", desc: "Las salÃ³n de bellezas gestionan su agenda, reducen no-shows y hacen crecer su negocio.", accent: "hsl(174,72%,34%)", bg: "hsl(174,72%,96%)" },
+              { icon: Shield, title: "Sin comisiones", desc: "No cobramos comisión por cita. El 100% del pago va directo al salón de belleza.", accent: "hsl(38,85%,44%)", bg: "hsl(43,100%,96%)" },
+              { icon: TrendingUp, title: "Gestión inteligente", desc: "Los salones de belleza gestionan su agenda, reducen no-shows y hacen crecer su negocio.", accent: "hsl(38,85%,44%)", bg: "hsl(43,100%,96%)" },
             ].map(({ icon: Icon, title, desc, accent, bg }) => (
               <div key={title} className="rounded-2xl border p-7 hover:shadow-md transition-all group">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 shadow-sm" style={{ background: bg, color: accent }}>
@@ -475,7 +488,7 @@ export default async function HomePage({ searchParams }: Props) {
         <div className="max-w-6xl mx-auto">
           <div
             className="relative overflow-hidden rounded-3xl p-10 md:p-14"
-            style={{ background: "linear-gradient(135deg, hsl(174,72%,10%) 0%, hsl(174,58%,20%) 60%, hsl(200,55%,14%) 100%)" }}
+            style={{ background: "linear-gradient(135deg, hsl(35,46%,12%) 0%, hsl(36,54%,20%) 60%, hsl(25,42%,14%) 100%)" }}
           >
             <div
               className="absolute inset-0 opacity-[0.05]"
@@ -488,19 +501,19 @@ export default async function HomePage({ searchParams }: Props) {
             <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
               <div className="max-w-lg">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-bold text-white/85 mb-5">
-                  <Shield className="h-3.5 w-3.5 text-amber-500" />
+                  <Shield className="h-3.5 w-3.5 text-amber-400" />
                   Para propietarios
                 </div>
                 <h2 className="text-3xl md:text-4xl font-black text-white mb-4 leading-tight">
-                  Â¿Tienes una salÃ³n de belleza?{" "}
-                  <span style={{ color: "hsl(44, 94%, 60%)" }}>RegÃ­strala gratis.</span>
+                  ¿Tienes un salón de belleza?{" "}
+                  <span style={{ color: "hsl(44, 94%, 60%)" }}>Regístralo gratis.</span>
                 </h2>
                 <p className="text-white/60 text-base leading-relaxed">
                   Gestiona tu agenda, reduce las cancelaciones y recibe reservas online 24/7.
                   Sin mensualidades para empezar.
                 </p>
                 <div className="flex flex-wrap gap-4 mt-5">
-                  {["Agenda digital", "Pagos online", "Panel de anÃ¡lisis"].map((f) => (
+                  {["Agenda digital", "Pagos online", "Panel de análisis"].map((f) => (
                     <div key={f} className="flex items-center gap-1.5 text-white/65 text-sm">
                       <CheckCircle2 className="h-4 w-4" style={{ color: "hsl(44,94%,60%)" }} />
                       {f}
@@ -516,14 +529,14 @@ export default async function HomePage({ searchParams }: Props) {
                   style={{ background: "hsl(44, 94%, 52%)", color: "#0d1117" }}
                 >
                   <Link href="/register">
-                    Registrar mi salÃ³n de belleza
+                    Registrar mi salón de belleza
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
                 <Link href="/login" className="text-center text-sm font-semibold text-white/50 hover:text-white/80 transition-colors">
-                  Ya tengo cuenta â Iniciar sesiÃ³n
+                  Ya tengo cuenta → Iniciar sesión
                 </Link>
-                <p className="text-center text-xs text-white/35">Sin tarjeta de crÃ©dito Â· Gratis para empezar</p>
+                <p className="text-center text-xs text-white/35">Sin tarjeta de crédito · Gratis para empezar</p>
               </div>
             </div>
           </div>
@@ -531,18 +544,18 @@ export default async function HomePage({ searchParams }: Props) {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t py-10 px-4" style={{ background: "hsl(174,20%,97%)" }}>
+      <footer className="border-t py-10 px-4" style={{ background: "hsl(43,70%,97%)" }}>
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2.5 mb-2">
-                <div className="rounded-lg p-1.5" style={{ background: "linear-gradient(135deg, hsl(174,72%,28%), hsl(174,60%,38%))" }}>
+                <div className="rounded-lg p-1.5" style={{ background: "linear-gradient(135deg, hsl(38,85%,36%), hsl(38,78%,48%))" }}>
                   <Sparkles className="h-4 w-4 text-white" />
                 </div>
                 <span className="font-black text-base text-foreground">iBeauty</span>
               </div>
               <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                La plataforma de reservas para salÃ³n de bellezas de RepÃºblica Dominicana.
+                La plataforma de reservas para salones de belleza que quieren captar y gestionar citas online.
               </p>
             </div>
             <div className="flex gap-12">
@@ -550,9 +563,9 @@ export default async function HomePage({ searchParams }: Props) {
                 <p className="text-xs font-bold text-foreground mb-3 uppercase tracking-wider">Plataforma</p>
                 <div className="flex flex-col gap-2">
                   {[
-                    { href: "/login", label: "Iniciar sesiÃ³n" },
+                    { href: "/login", label: "Iniciar sesión" },
                     { href: "/register", label: "Registrarse" },
-                    { href: "/register", label: "Registrar salÃ³n de belleza" },
+                    { href: "/register", label: "Registrar salón de belleza" },
                   ].map((link) => (
                     <Link key={link.label} href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                       {link.label}
@@ -564,9 +577,9 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
           <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Â© {new Date().getFullYear()} iBeauty Â· Plataforma de reservas para salÃ³n de bellezas en RepÃºblica Dominicana
+              © {new Date().getFullYear()} iBeauty · Plataforma de reservas para salones de belleza
             </p>
-            <p className="text-xs text-muted-foreground">RepÃºblica Dominicana ð©ð´</p>
+            <p className="text-xs text-muted-foreground">Disponible para varios países</p>
           </div>
         </div>
       </footer>

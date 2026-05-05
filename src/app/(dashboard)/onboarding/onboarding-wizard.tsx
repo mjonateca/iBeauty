@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Scissors, CheckCircle2 } from "lucide-react";
+import { Sparkles, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import StepShopInfo from "./steps/step-shop-info";
 import StepServices from "./steps/step-services";
-import StepBarber from "./steps/step-barber";
+import StepBeauty from "./steps/step-barber";
 
 export interface OnboardingData {
   // Paso 1
@@ -17,6 +17,7 @@ export interface OnboardingData {
   countryCode: string;
   countryName: string;
   city: string;
+  currency: string;
   description: string;
   // Paso 2
   services: Array<{ name: string; duration_min: number; price: number }>;
@@ -36,9 +37,9 @@ export default function OnboardingWizard({ userId }: { userId: string }) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<Partial<OnboardingData>>({
     services: [
-      { name: "Corte de cabello", duration_min: 30, price: 350 },
-      { name: "Corte + barba",    duration_min: 45, price: 550 },
-      { name: "Barba",            duration_min: 20, price: 300 },
+      { name: "Peinado y styling", duration_min: 30, price: 350 },
+      { name: "Manicura + pedicura", duration_min: 45, price: 550 },
+      { name: "Tratamiento facial", duration_min: 20, price: 300 },
     ],
   });
 
@@ -64,7 +65,7 @@ export default function OnboardingWizard({ userId }: { userId: string }) {
       <header className="border-b px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <div className="bg-primary rounded-xl p-2">
-            <Scissors className="h-5 w-5 text-white" />
+            <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
             <p className="font-semibold text-sm">iBeauty</p>
@@ -131,7 +132,7 @@ export default function OnboardingWizard({ userId }: { userId: string }) {
           />
         )}
         {step === 2 && (
-          <StepBarber
+          <StepBeauty
             data={data}
             onUpdate={updateData}
             onBack={goBack}

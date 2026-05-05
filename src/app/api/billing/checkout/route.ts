@@ -20,7 +20,7 @@ export async function POST() {
     .single();
 
   if (shopQuery.error || !shopQuery.data) {
-    return NextResponse.json({ error: "Salón de belleza no encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Salón de belleza no encontrado" }, { status: 404 });
   }
 
   const shop = shopQuery.data;

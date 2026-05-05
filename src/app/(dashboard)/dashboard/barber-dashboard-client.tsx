@@ -13,7 +13,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { formatCurrency, formatTime } from "@/lib/utils";
 import type { Barber, BookingStatus, Service, Shop } from "@/types/database";
 
-type BarberBooking = {
+type BeautyBooking = {
   id: string;
   date: string;
   start_time: string;
@@ -25,13 +25,13 @@ type BarberBooking = {
 };
 
 type BarberWithShop = Barber & { shops?: Shop | null; barber_services?: Array<{ service_id: string }> };
-type BarberTab = "summary" | "bookings" | "clients" | "profile";
+type BeautyTab = "summary" | "bookings" | "clients" | "profile";
 
 interface Props {
   barber: BarberWithShop;
   services: Service[];
-  todayBookings: BarberBooking[];
-  upcomingBookings: BarberBooking[];
+  todayBookings: BeautyBooking[];
+  upcomingBookings: BeautyBooking[];
   expectedToday: number;
   initialTab?: string;
 }
@@ -45,14 +45,14 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   cancelled: "Cancelada",
 };
 
-const barberTabs: Array<{ id: BarberTab; label: string }> = [
+const barberTabs: Array<{ id: BeautyTab; label: string }> = [
   { id: "summary", label: "Hoy" },
   { id: "bookings", label: "Turnos" },
   { id: "clients", label: "Clientes" },
   { id: "profile", label: "Perfil" },
 ];
 
-export default function BarberDashboardClient({
+export default function BeautyDashboardClient({
   barber,
   services,
   todayBookings,
@@ -62,7 +62,7 @@ export default function BarberDashboardClient({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentTab = (searchParams.get("tab") || initialTab) as BarberTab;
+  const currentTab = (searchParams.get("tab") || initialTab) as BeautyTab;
   const [profile, setProfile] = useState(barber);
   const [saving, setSaving] = useState(false);
 
@@ -81,7 +81,7 @@ export default function BarberDashboardClient({
     [todayBookings, upcomingBookings]
   );
 
-  function goToTab(tab: BarberTab) {
+  function goToTab(tab: BeautyTab) {
     router.push(`/dashboard?tab=${tab}`);
   }
 
@@ -263,7 +263,7 @@ export default function BarberDashboardClient({
   );
 }
 
-function BookingRow({ booking }: { booking: BarberBooking }) {
+function BookingRow({ booking }: { booking: BeautyBooking }) {
   return (
     <div className="rounded-lg border p-4">
       <div className="flex items-start justify-between gap-3">

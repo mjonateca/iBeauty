@@ -35,7 +35,7 @@ export async function POST(
       payment_currency,
       payment_required,
       services(name, price, currency),
-      shops(name, payments_enabled, online_payment_mode)
+      shops(name, payments_enabled, online_payment_mode, currency)
     `)
     .eq("id", id)
     .maybeSingle();
@@ -46,7 +46,7 @@ export async function POST(
 
   const bookingShop = Array.isArray(booking.shops) ? booking.shops[0] : booking.shops;
   if (!bookingShop?.payments_enabled) {
-    return NextResponse.json({ error: "Esta salón de belleza todavía no tiene pagos online activos." }, { status: 409 });
+    return NextResponse.json({ error: "Este salón de belleza todavía no tiene pagos online activos." }, { status: 409 });
   }
 
   if (booking.payment_status === "paid") {
@@ -55,7 +55,7 @@ export async function POST(
 
   const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
   const amount = Number(booking.payment_amount || service?.price || 0);
-  const currency = String(booking.payment_currency || service?.currency || "DOP");
+  const currency = String(booking.payment_currency || service?.currency || bookingShop?.currency || "USD");
   const customerId = await ensureClientStripeCustomer(context.account.client, context.user.email);
 
   const existingPayment = await admin

@@ -36,10 +36,12 @@ export interface Shop {
   slug: string;
   logo_url: string | null;
   banner_url: string | null;
+  maps_url: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
-  maps_url: string | null;
+  currency: string;
+  currency_symbol: string;
   phone: string | null;
   whatsapp: string | null;
   country_code: string | null;
@@ -47,8 +49,10 @@ export interface Shop {
   city: string | null;
   description: string | null;
   is_active: boolean;
+  reminder_channels: ("email" | "whatsapp")[];
   city_normalized?: string | null;
   opening_hours: Json;
+  reminder_lead_minutes: number;
   deposit_required: boolean;
   deposit_amount: number;
   payments_enabled: boolean;
@@ -93,7 +97,10 @@ export interface BarberService {
 
 export interface Booking {
   id: string;
-  client_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_phone: string | null;
+  notes: string | null;
   barber_id: string;
   shop_id: string;
   service_id: string;
@@ -189,7 +196,7 @@ export interface NotificationEvent {
   booking_id: string | null;
   shop_id: string | null;
   client_id: string | null;
-  channel: "whatsapp";
+  channel: "email" | "whatsapp";
   type: NotificationType;
   status: NotificationStatus;
   scheduled_for: string | null;
@@ -203,7 +210,7 @@ export interface NotificationTemplate {
   id: string;
   shop_id: string | null;
   type: NotificationType;
-  channel: "whatsapp";
+  channel: "email" | "whatsapp";
   is_active: boolean;
   send_offset_minutes: number | null;
   body: string;
@@ -325,6 +332,30 @@ export interface EmailNotification {
   sent_at: string | null;
   error_message: string | null;
   created_at: string;
+}
+
+export interface PendingWhatsappReminder {
+  event_id: string;
+  booking_id: string;
+  scheduled_for: string | null;
+  client_name: string;
+  client_phone: string | null;
+  client_whatsapp: string | null;
+  service_name: string;
+  barber_name: string;
+  date: string;
+  start_time: string;
+}
+
+export interface PendingEmailReminder {
+  event_id: string;
+  booking_id: string;
+  scheduled_for: string | null;
+  client_name: string;
+  service_name: string;
+  barber_name: string;
+  date: string;
+  start_time: string;
 }
 
 

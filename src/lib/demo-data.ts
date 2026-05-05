@@ -18,8 +18,9 @@ export const demoShop: Shop = {
   country_code: "DO",
   country_name: "República Dominicana",
   city: "Santiago",
-  description: "SalÃ³n de belleza y estÃ©tica. PeluquerÃ­a, manicura, pedicura y coloraciÃ³n. estilistas y servicios.",
+  description: "Salón de belleza y estética. Peluquería, manicura, pedicura y coloración, estilistas y servicios.",
   is_active: true,
+  reminder_channels: ["email", "whatsapp"],
   opening_hours: {
     lunes:     { open: "09:00", close: "19:00", closed: false },
     martes:    { open: "09:00", close: "19:00", closed: false },
@@ -29,10 +30,13 @@ export const demoShop: Shop = {
     sabado:    { open: "09:00", close: "17:00", closed: false },
     domingo:   { open: "09:00", close: "13:00", closed: true },
   },
+  reminder_lead_minutes: 180,
   deposit_required: false,
   deposit_amount: 0,
   payments_enabled: true,
   online_payment_mode: "optional",
+  currency: "DOP",
+  currency_symbol: "RD$",
   created_at: new Date().toISOString(),
 };
 
@@ -43,11 +47,11 @@ export const demoBarbers: Barber[] = [
     shop_id: "demo-shop-1",
     display_name: "Valentina Cruz",
     avatar_url: null,
-    bio: "10 aÃ±os de experiencia, especialista en cortes clÃ¡sicos y modernos.",
+    bio: "10 años de experiencia, especialista en coloración, peinados y tratamientos.",
     portfolio_urls: [],
     rating: 4.8,
     is_independent: false,
-    specialty: "Cortes clÃ¡sicos",
+    specialty: "Coloración",
     is_active: true,
     created_at: new Date().toISOString(),
   },
@@ -57,21 +61,21 @@ export const demoBarbers: Barber[] = [
     shop_id: "demo-shop-1",
     display_name: "Sofía Morales",
     avatar_url: null,
-    bio: "Especialista en degradados y diseÃ±os creativos.",
+    bio: "Especialista en manicura, pedicura y cuidado de manos.",
     portfolio_urls: [],
     rating: 4.6,
     is_independent: false,
-    specialty: "Degradados",
+    specialty: "Manicura",
     is_active: true,
     created_at: new Date().toISOString(),
   },
 ];
 
 export const demoServices: Service[] = [
-  { id: "svc-1", shop_id: "demo-shop-1", name: "Peinado y Styling", duration_min: 30, price: 350, currency: "DOP", is_active: true, description: "Corte clÃ¡sico o moderno.", category: "Cabello", is_visible: true, sort_order: 1, created_at: new Date().toISOString() },
-  { id: "svc-2", shop_id: "demo-shop-1", name: "Manicura + Pedicura",    duration_min: 45, price: 550, currency: "DOP", is_active: true, description: "Corte completo con perfilado.", category: "Combo", is_visible: true, sort_order: 2, created_at: new Date().toISOString() },
-  { id: "svc-3", shop_id: "demo-shop-1", name: "Tratamiento Facial",            duration_min: 20, price: 300, currency: "DOP", is_active: true, description: "Arreglo y perfilado de barba.", category: "Tratamiento Facial", is_visible: true, sort_order: 3, created_at: new Date().toISOString() },
-  { id: "svc-4", shop_id: "demo-shop-1", name: "Coloración",   duration_min: 25, price: 300, currency: "DOP", is_active: true, description: "Corte para niÃ±os.", category: "Cabello", is_visible: true, sort_order: 4, created_at: new Date().toISOString() },
+  { id: "svc-1", shop_id: "demo-shop-1", name: "Peinado y styling", duration_min: 30, price: 350, currency: "DOP", is_active: true, description: "Lavado, secado y acabado profesional.", category: "Cabello", is_visible: true, sort_order: 1, created_at: new Date().toISOString() },
+  { id: "svc-2", shop_id: "demo-shop-1", name: "Manicura + pedicura", duration_min: 45, price: 550, currency: "DOP", is_active: true, description: "Cuidado completo de manos y pies.", category: "Uñas", is_visible: true, sort_order: 2, created_at: new Date().toISOString() },
+  { id: "svc-3", shop_id: "demo-shop-1", name: "Tratamiento facial", duration_min: 20, price: 300, currency: "DOP", is_active: true, description: "Limpieza facial rápida y cuidado de piel.", category: "Facial", is_visible: true, sort_order: 3, created_at: new Date().toISOString() },
+  { id: "svc-4", shop_id: "demo-shop-1", name: "Coloración", duration_min: 25, price: 300, currency: "DOP", is_active: true, description: "Retoque o coloración express.", category: "Cabello", is_visible: true, sort_order: 4, created_at: new Date().toISOString() },
 ];
 
 export const demoClient: Client = {
@@ -96,7 +100,7 @@ export const demoBookings: (Booking & {
   services: { name: string; duration_min: number; price: number } | null;
 })[] = [
   {
-    id: "bk-1", client_id: "demo-client-1", barber_id: "demo-barber-1",
+    id: "bk-1", client_id: "demo-client-1", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-1",
     shop_id: "demo-shop-1", service_id: "svc-1",
     date: today, start_time: "09:00:00", end_time: "09:30:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
@@ -107,7 +111,7 @@ export const demoBookings: (Booking & {
     services: { name: "Peinado y Styling", duration_min: 30, price: 350 },
   },
   {
-    id: "bk-2", client_id: "demo-client-2", barber_id: "demo-barber-2",
+    id: "bk-2", client_id: "demo-client-2", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-2",
     shop_id: "demo-shop-1", service_id: "svc-2",
     date: today, start_time: "10:00:00", end_time: "10:45:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
@@ -118,7 +122,7 @@ export const demoBookings: (Booking & {
     services: { name: "Manicura + Pedicura", duration_min: 45, price: 550 },
   },
   {
-    id: "bk-3", client_id: "demo-client-3", barber_id: "demo-barber-1",
+    id: "bk-3", client_id: "demo-client-3", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-1",
     shop_id: "demo-shop-1", service_id: "svc-3",
     date: today, start_time: "11:30:00", end_time: "11:50:00",
     status: "completed", deposit_status: "none", deposit_amount: 0,
@@ -129,7 +133,7 @@ export const demoBookings: (Booking & {
     services: { name: "Tratamiento Facial", duration_min: 20, price: 300 },
   },
   {
-    id: "bk-4", client_id: "demo-client-4", barber_id: "demo-barber-2",
+    id: "bk-4", client_id: "demo-client-4", client_name: null, client_phone: null, notes: null, barber_id: "demo-barber-2",
     shop_id: "demo-shop-1", service_id: "svc-4",
     date: today, start_time: "14:00:00", end_time: "14:25:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,

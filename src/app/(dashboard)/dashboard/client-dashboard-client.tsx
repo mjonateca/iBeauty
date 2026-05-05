@@ -225,7 +225,7 @@ export default function ClientDashboardClient({
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {shops.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay salón de bellezas activas en tu ciudad.</p>
+              <p className="text-sm text-muted-foreground">No hay salones de belleza activos en tu ciudad.</p>
             ) : (
               shops.map((shop) => (
                 <div key={shop.id} className="rounded-lg border p-4">
@@ -353,7 +353,7 @@ export default function ClientDashboardClient({
             </CardHeader>
             <CardContent className="space-y-3">
               {favoriteShops.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Todavía no has marcado salón de bellezas favoritas.</p>
+                <p className="text-sm text-muted-foreground">Todavía no has marcado salones de belleza favoritas.</p>
               ) : (
                 favoriteShops.map((shop) => (
                   <div key={shop.id} className="rounded-lg border p-4">

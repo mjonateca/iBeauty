@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { COUNTRIES, getCitiesForCountry } from "@/lib/locations";
+import { COUNTRIES, getCurrencyForCountry, getCitiesForCountry } from "@/lib/locations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ const registerSchema = z.object({
   email: z.string().email("Correo inválido"),
   phone: z.string().min(7, "Teléfono requerido"),
   countryCode: z.string().min(2, "País requerido"),
+  currency: z.string().default("USD"),
   city: z.string().min(2, "Ciudad requerida"),
   address: z.string().optional(),
   description: z.string().optional(),
@@ -60,8 +61,8 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       accountType: "client",
-      countryCode: "DO",
-      city: "Santo Domingo",
+      countryCode: "",
+      city: "",
     },
   });
 
@@ -95,6 +96,7 @@ export default function RegisterPage() {
           email: data.email,
           phone: data.phone,
           countryCode: data.countryCode,
+        currency: getCurrencyForCountry(data.countryCode).currency,
           city: data.city,
           address: data.address || "",
           description: data.description || "",
@@ -172,7 +174,7 @@ export default function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="shopSlug">Salón de belleza donde trabajas</Label>
-                <Input id="shopSlug" placeholder="slug de la salÃ³n de belleza, opcional" {...register("shopSlug")} />
+                <Input id="shopSlug" placeholder="slug del salón de belleza, opcional" {...register("shopSlug")} />
               </div>
             </div>
           )}
@@ -223,6 +225,7 @@ export default function RegisterPage() {
                   },
                 })}
               >
+                <option value="">Selecciona un país</option>
                 {COUNTRIES.map((country) => (
                   <option key={country.code} value={country.code}>
                     {country.name}
@@ -236,8 +239,10 @@ export default function RegisterPage() {
               <select
                 id="city"
                 className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
+                disabled={!countryCode}
                 {...register("city")}
               >
+                <option value="">{countryCode ? "Selecciona una ciudad" : "Selecciona un país primero"}</option>
                 {cities.map((city) => (
                   <option key={city} value={city}>
                     {city}
@@ -259,11 +264,11 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">DescripciÃ³n</Label>
+                <Label htmlFor="description">Descripción</Label>
                 <textarea
                   id="description"
                   className="flex min-h-[84px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
-                  placeholder="Especialidad, ambiente, zona o ventajas de tu salÃ³n de belleza."
+                  placeholder="Especialidad, ambiente, zona o ventajas de tu salón de belleza."
                   {...register("description")}
                 />
               </div>
@@ -272,7 +277,7 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="password">ContraseÃ±a *</Label>
+              <Label htmlFor="password">Contraseña *</Label>
               <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
               {errors.password && (
                 <p className="text-xs text-destructive">{errors.password.message}</p>
@@ -294,7 +299,7 @@ export default function RegisterPage() {
                 Creando cuenta...
               </>
             ) : accountType === "barbershop" ? (
-              "Registrar salÃ³n de belleza"
+              "Registrar salón de belleza"
             ) : accountType === "barber" ? (
               "Crear cuenta de estilista"
             ) : (
@@ -304,9 +309,9 @@ export default function RegisterPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Â¿Ya tienes cuenta?{" "}
+          ¿Ya tienes cuenta?{" "}
           <Link href="/login" className="text-primary font-medium hover:underline">
-            Inicia sesiÃ³n
+            Inicia sesión
           </Link>
         </p>
       </CardContent>

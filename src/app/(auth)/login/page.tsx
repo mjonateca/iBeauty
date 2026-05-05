@@ -15,8 +15,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
-  email: z.string().email("Correo invÃ¡lido"),
-  password: z.string().min(6, "MÃ­nimo 6 caracteres"),
+  email: z.string().email("Correo inválido"),
+  password: z.string().min(6, "Mínimo 6 caracteres"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -59,11 +59,11 @@ export default function LoginPage() {
       const msg = err instanceof Error ? err.message : "Error desconocido";
       toast({
         variant: "destructive",
-        title: "Error al iniciar sesiÃ³n",
+        title: "Error al iniciar sesión",
         description: msg.includes("Invalid login credentials")
-          ? "Correo o contraseÃ±a incorrectos"
+          ? "Correo o contraseña incorrectos"
           : msg.includes("Invalid URL") || msg.includes("supabaseUrl")
-          ? "Supabase no estÃ¡ configurado. Agrega las variables en .env.local."
+          ? "Supabase no está configurado. Agrega las variables en .env.local."
           : msg,
       });
       setLoading(false);
@@ -80,11 +80,11 @@ export default function LoginPage() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Correo electrÃ³nico</Label>
+            <Label htmlFor="email">Correo electrónico</Label>
             <Input
               id="email"
               type="email"
-              placeholder="tucorreo@ejemplo.com"
+              placeholder="tusalon@ejemplo.com"
               autoComplete="email"
               {...register("email")}
             />
@@ -94,11 +94,16 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">ContraseÃ±a</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="password">Contraseña</Label>
+              <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                ¿La olvidaste?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
-              placeholder="â¢â¢â¢â¢â¢â¢â¢â¢"
+              placeholder="••••••••"
               autoComplete="current-password"
               {...register("password")}
             />
@@ -114,15 +119,15 @@ export default function LoginPage() {
                 Entrando...
               </>
             ) : (
-              "Iniciar sesiÃ³n"
+              "Iniciar sesión"
             )}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Â¿No tienes cuenta?{" "}
+          ¿No tienes cuenta?{" "}
           <Link href="/register" className="text-primary font-medium hover:underline">
-            RegÃ­strate
+            Regístrate
           </Link>
         </p>
       </CardContent>

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     default: "iBeauty — Reserva tu cita",
     template: "%s | iBeauty",
   },
-  description: "Reserva citas en los mejores salones de belleza de República Dominicana",
+  description: "Reserva citas en salones de belleza de cualquier país, elige servicio y horario en minutos.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -22,7 +22,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#f97316",
+  themeColor: "#b7791f",
 };
 
 export default function RootLayout({

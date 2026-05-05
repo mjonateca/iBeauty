@@ -30,9 +30,9 @@ interface Props {
 export default function StepServices({ data, onUpdate, onNext, onBack }: Props) {
   const [services, setServices] = useState(
     data.services || [
-      { name: "Corte de cabello", duration_min: 30, price: 350 },
-      { name: "Corte + barba",    duration_min: 45, price: 550 },
-      { name: "Barba",            duration_min: 20, price: 300 },
+      { name: "Peinado y styling", duration_min: 30, price: 350 },
+      { name: "Manicura + pedicura",    duration_min: 45, price: 550 },
+      { name: "Tratamiento facial",            duration_min: 20, price: 300 },
     ]
   );
   const [showForm, setShowForm] = useState(false);

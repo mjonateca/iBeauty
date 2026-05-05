@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Star, Clock, Scissors, Home, ExternalLink } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { buildMapsEmbedUrl, formatCurrency, normalizeMapsUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AccountRole, Shop, Barber, Service } from "@/types/database";
@@ -38,14 +38,13 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
     return activeServices.filter((s) => serviceIds.has(s.id));
   }
 
-  // Only use maps_url directly — must be a Google Maps embed URL (maps/embed?pb=...)
-  // Users get this from: Google Maps → Share → Embed a map → copy the src attribute
-  const mapsEmbedSrc = shop.maps_url || null;
-  const mapsExternalUrl = shop.maps_url || null;
+  const locationQuery = [shop.address, shop.city, shop.country_name].filter(Boolean).join(", ");
+  const mapsEmbedSrc = buildMapsEmbedUrl(shop.maps_url, locationQuery || null);
+  const mapsExternalUrl = normalizeMapsUrl(shop.maps_url) || null;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted))]">
-      {/* Header de la salón de belleza */}
+      {/* Header del salón de belleza */}
       <div className="relative overflow-hidden bg-[hsl(var(--foreground))] text-white">
         <div
           className="absolute inset-0 opacity-30"
@@ -90,15 +89,15 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                 <p className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1">
                   <MapPin className="h-3.5 w-3.5" />
                   {shop.address}
-                  {shop.maps_url && (
-                    <a href={shop.maps_url} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-white">
+                  {mapsExternalUrl && (
+                    <a href={mapsExternalUrl} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-white">
                       Ver mapa <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
                 </p>
               )}
-              {!shop.address && shop.maps_url && (
-                <a href={shop.maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1 hover:text-white">
+              {!shop.address && mapsExternalUrl && (
+                <a href={mapsExternalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1 hover:text-white">
                   <MapPin className="h-3.5 w-3.5" />
                   Ver ubicación en Google Maps <ExternalLink className="h-3 w-3" />
                 </a>
@@ -200,7 +199,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
             {activeServices.length === 0 && (
               <Card className="border-none shadow-none">
                 <CardContent className="p-4 text-sm text-muted-foreground">
-                  Esta salón de belleza aún no tiene servicios activos.
+                  Este salón de belleza aún no tiene servicios activos.
                 </CardContent>
               </Card>
             )}
@@ -233,7 +232,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Ubicación de la salón de belleza"
+                title="Ubicación del salón de belleza"
               />
             </div>
             {shop.address && (
@@ -268,7 +267,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
 
           {shop.deposit_required && shop.deposit_amount > 0 && (
             <p className="text-xs text-center text-muted-foreground mt-3">
-              Se requiere depósito de {formatCurrency(shop.deposit_amount, "DOP")} al reservar
+              Se requiere depósito de {formatCurrency(shop.deposit_amount, shop.currency || "USD")} al reservar
             </p>
           )}
         </div>

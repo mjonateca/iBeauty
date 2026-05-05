@@ -20,12 +20,12 @@ const shopNavItems: NavItem[] = [
   { tab: "barbers", label: "Estilistas", icon: UserRound },
   { tab: "clients", label: "Clientes", icon: Users },
   { tab: "schedule", label: "Horarios", icon: Clock },
-  { tab: "email", label: "Email", icon: Mail },
+  { tab: "notifications", label: "Avisos", icon: Mail },
   { tab: "settings", label: "Ajustes", icon: Settings },
 ];
 
 const clientNavItems: NavItem[] = [
-  { tab: "summary", label: "Cerca de mÃÂ­", icon: LayoutDashboard },
+  { tab: "summary", label: "Cerca de mí", icon: LayoutDashboard },
   { tab: "bookings", label: "Reservas", icon: Calendar },
   { tab: "favorites", label: "Favoritos", icon: Mail },
   { tab: "profile", label: "Perfil", icon: UserRound },
@@ -92,7 +92,7 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
-            Cerrar sesiÃÂ³n
+            Cerrar sesión
           </button>
         </div>
       </aside>

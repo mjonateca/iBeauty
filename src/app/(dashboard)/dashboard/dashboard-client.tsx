@@ -1,14 +1,12 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { InputHTMLAttributes } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
-  Bell,
   CalendarDays,
   Camera,
-  CheckCircle,
   Clock,
   CreditCard,
   ExternalLink,
@@ -17,7 +15,6 @@ import {
   Mail,
   Scissors,
   Send,
-  Settings,
   Star,
   Trash2,
   TrendingUp,
@@ -32,13 +29,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { formatCurrency, formatTime } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { buildAppUrl, formatCurrency, formatTime, getCurrentDateInTimeZone, getCurrentTimeInTimeZone } from "@/lib/utils";
+import { getTimeZoneForCountry } from "@/lib/locations";
 import type {
   Barber,
   BarberRating,
   BookingStatus,
   EmailNotification,
   NotificationEvent,
+  PendingEmailReminder,
+  PendingWhatsappReminder,
   PaymentStatus,
   Service,
   Shop,
@@ -46,10 +47,14 @@ import type {
   ShopSubscription,
   SubscriptionStatus,
 } from "@/types/database";
+import { getReminderChannelsLabel, normalizeReminderChannels, type ReminderChannel } from "@/lib/notifications";
 
 export interface BookingWithRelations {
   id: string;
-  client_id?: string;
+  client_id?: string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+  notes?: string | null;
   date?: string;
   start_time: string;
   end_time: string;
@@ -58,6 +63,7 @@ export interface BookingWithRelations {
   payment_required: boolean;
   payment_amount: number;
   payment_currency: string;
+  whatsapp_reminder_sent?: boolean;
   clients: { name: string; phone: string | null; whatsapp: string | null } | null;
   barbers: { display_name: string } | null;
   services: { name: string; duration_min: number; price: number } | null;
@@ -71,6 +77,17 @@ type ClientSummary = {
   whatsapp: string | null;
   city?: string | null;
   country_name?: string | null;
+};
+
+type ManualBookingFormState = {
+  client_id: string;
+  client_name: string;
+  client_phone: string;
+  barber_id: string;
+  service_id: string;
+  date: string;
+  start_time: string;
+  notes: string;
 };
 
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
@@ -101,6 +118,8 @@ interface Props {
   notificationEvents: NotificationEvent[];
   ratings: BarberRating[];
   emailNotifications: EmailNotification[];
+  pendingEmailReminders: PendingEmailReminder[];
+  pendingWhatsappReminders: PendingWhatsappReminder[];
   subscription: ShopSubscription | null;
   paymentMethods: ShopPaymentMethod[];
   analytics: Analytics;
@@ -109,7 +128,7 @@ interface Props {
   initialTab?: string;
 }
 
-type TabId = "summary" | "bookings" | "services" | "barbers" | "clients" | "schedule" | "email" | "settings";
+type TabId = "summary" | "bookings" | "services" | "barbers" | "clients" | "schedule" | "notifications" | "settings";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   pending: "Pendiente",
@@ -122,7 +141,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
 
 const STATUS_COLORS: Record<BookingStatus, string> = {
   pending: "bg-amber-100 text-amber-700 border-amber-200",
-  confirmed: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  confirmed: "bg-amber-100 text-amber-700 border-amber-200",
   rescheduled: "bg-blue-100 text-blue-700 border-blue-200",
   completed: "bg-primary/10 text-primary border-primary/20",
   no_show: "bg-red-100 text-red-700 border-red-200",
@@ -185,9 +204,17 @@ function normalizeOpeningHours(value: Shop["opening_hours"]): OpeningHoursValue 
   return normalized;
 }
 
+function addMinutesToTime(value: string, minutesToAdd: number) {
+  const [hours, minutes] = value.split(":").map(Number);
+  const totalMinutes = (hours * 60) + minutes + minutesToAdd;
+  const nextHours = Math.floor(totalMinutes / 60);
+  const nextMinutes = totalMinutes % 60;
+  return `${nextHours.toString().padStart(2, "0")}:${nextMinutes.toString().padStart(2, "0")}:00`;
+}
+
 function subscriptionTone(status?: SubscriptionStatus | null) {
   switch (status) {
-    case "active": case "trial": return "text-emerald-600";
+    case "active": case "trial": return "text-amber-600";
     case "past_due": return "text-amber-600";
     default: return "text-destructive";
   }
@@ -213,6 +240,8 @@ export default function DashboardClient({
   clients,
   ratings,
   emailNotifications: initialEmailNotifications,
+  pendingEmailReminders: initialPendingEmailReminders,
+  pendingWhatsappReminders: initialPendingWhatsappReminders,
   subscription,
   paymentMethods,
   analytics,
@@ -220,7 +249,6 @@ export default function DashboardClient({
   todayStr,
   initialTab = "summary",
 }: Props) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = (searchParams.get("tab") || initialTab) as TabId;
   const [bookings, setBookings] = useState(initialBookings);
@@ -235,11 +263,37 @@ export default function DashboardClient({
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [bannerPreview, setBannerPreview] = useState<string | null>(shop.banner_url || null);
-  const [uploadingBarberPhoto, setUploadingBarberPhoto] = useState<string | null>(null);
+  const [uploadingBeautyPhoto, setUploadingBeautyPhoto] = useState<string | null>(null);
   const [emailNotifications, setEmailNotifications] = useState(initialEmailNotifications);
-  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [pendingEmailReminders, setPendingEmailReminders] = useState(initialPendingEmailReminders);
+  const [pendingWhatsappReminders, setPendingWhatsappReminders] = useState(initialPendingWhatsappReminders);
+  const [openingWhatsAppId, setOpeningWhatsAppId] = useState<string | null>(null);
+  const [sendingEmailBookingId, setSendingEmailBookingId] = useState<string | null>(null);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [creatingManualBooking, setCreatingManualBooking] = useState(false);
+  const [showManualBookingForm, setShowManualBookingForm] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
+  const [reminderChannels, setReminderChannels] = useState<ReminderChannel[]>(() => normalizeReminderChannels(shop.reminder_channels));
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const shopTimeZone = useMemo(() => getTimeZoneForCountry(shopState.country_code || ""), [shopState.country_code]);
+  const todayDateInput = useMemo(() => getCurrentDateInTimeZone(shopTimeZone), [shopTimeZone]);
+  const [manualBookingForm, setManualBookingForm] = useState<ManualBookingFormState>({
+    client_id: "",
+    client_name: "",
+    client_phone: "",
+    barber_id: "",
+    service_id: "",
+    date: todayDateInput,
+    start_time: "",
+    notes: "",
+  });
+
+  useEffect(() => {
+    setManualBookingForm((current) => ({
+      ...current,
+      date: current.date || todayDateInput,
+    }));
+  }, [todayDateInput]);
 
   const clientItems = useMemo(
     () =>
@@ -257,8 +311,47 @@ export default function DashboardClient({
     [todayBookings]
   );
 
+  const activeBarbers = useMemo(
+    () => barbers.filter((barber) => barber.is_active !== false),
+    [barbers]
+  );
+
+  const activeServices = useMemo(
+    () => services.filter((service) => service.is_active),
+    [services]
+  );
+  const reminderEmailsSentByBooking = useMemo(
+    () =>
+      new Set(
+        emailNotifications
+          .filter((notification) => notification.type === "reminder" && notification.status === "sent" && notification.booking_id)
+          .map((notification) => notification.booking_id as string)
+      ),
+    [emailNotifications]
+  );
+  const todayEmailNotifications = useMemo(
+    () =>
+      emailNotifications.filter(
+        (notification) => getCurrentDateInTimeZone(shopTimeZone, new Date(notification.created_at)) === todayDateInput
+      ),
+    [emailNotifications, shopTimeZone, todayDateInput]
+  );
+  const isEmailEnabled = reminderChannels.includes("email");
+  const isWhatsAppEnabled = reminderChannels.includes("whatsapp");
+
+  function isReminderEligible(booking: BookingWithRelations) {
+    if (booking.status !== "confirmed" || !booking.date) return false;
+
+    const today = getCurrentDateInTimeZone(shopTimeZone);
+    if (booking.date > today) return true;
+    if (booking.date < today) return false;
+
+    const currentTime = getCurrentTimeInTimeZone(shopTimeZone);
+    return booking.start_time.slice(0, 5) > currentTime;
+  }
+
   // Ratings grouped by barber_id
-  const ratingsByBarber = useMemo(() => {
+  const ratingsByBeauty = useMemo(() => {
     const map: Record<string, BarberRating[]> = {};
     for (const r of ratings) {
       if (!map[r.barber_id]) map[r.barber_id] = [];
@@ -338,7 +431,7 @@ export default function DashboardClient({
     toast({ title: "Servicio eliminado" });
   }
 
-  async function createBarber(event: FormEvent<HTMLFormElement>) {
+  async function createBeauty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const serviceIds = form.getAll("service_ids").map(String);
@@ -348,10 +441,10 @@ export default function DashboardClient({
       body: JSON.stringify({ shop_id: shopState.id, display_name: form.get("display_name"), specialty: form.get("specialty"), bio: form.get("bio"), service_ids: serviceIds }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el estilista", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se creó el profesional", description: payload.error }); return; }
     setBarbers((prev) => [...prev, { ...payload, barber_services: serviceIds.map((id) => ({ service_id: id })) }]);
     event.currentTarget.reset();
-    toast({ title: "Estilista creado" });
+    toast({ title: "Profesional creado" });
   }
 
   async function toggleBarber(barber: BarberWithServices) {
@@ -368,14 +461,14 @@ export default function DashboardClient({
     setBarbers((prev) => prev.map((item) => (item.id === barber.id ? { ...item, is_active: !item.is_active } : item)));
   }
 
-  async function uploadBarberPhoto(barberId: string, file: File) {
+  async function uploadBeautyPhoto(barberId: string, file: File) {
     if (file.size > 5 * 1024 * 1024) { toast({ variant: "destructive", title: "Imagen demasiado grande", description: "Máx. 5 MB" }); return; }
-    setUploadingBarberPhoto(barberId);
+    setUploadingBeautyPhoto(barberId);
     const formData = new FormData();
     formData.append("file", file);
     const res = await fetch(`/api/dashboard/barbers/${barberId}/upload-photo`, { method: "POST", body: formData });
     const payload = await res.json().catch(() => ({}));
-    setUploadingBarberPhoto(null);
+    setUploadingBeautyPhoto(null);
     if (!res.ok) { toast({ variant: "destructive", title: "Error al subir foto", description: payload.error }); return; }
     setBarbers((prev) => prev.map((b) => b.id === barberId ? { ...b, avatar_url: payload.url } : b));
     toast({ title: "Foto actualizada" });
@@ -436,18 +529,195 @@ export default function DashboardClient({
     if (res.ok) { const p = await res.json().catch(() => ({})); setShopState(p); setBannerPreview(null); toast({ title: "Banner eliminado" }); }
   }
 
-  async function sendEmailReminder(bookingId: string) {
-    setSendingReminder(bookingId);
-    const res = await fetch("/api/dashboard/email-notifications", {
+  async function saveReminderChannels(nextChannels: ReminderChannel[]) {
+    const normalized = normalizeReminderChannels(nextChannels, []);
+    const response = await fetch("/api/dashboard/shop", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reminder_channels: normalized }),
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se guardó la configuración", description: payload.error });
+      return;
+    }
+
+    setReminderChannels(normalized);
+    setShopState(payload);
+    toast({ title: "Canales de recordatorio actualizados" });
+  }
+
+  async function toggleReminderChannel(channel: ReminderChannel) {
+    const current = normalizeReminderChannels(reminderChannels, []);
+    const next = current.includes(channel) ? current.filter((item) => item !== channel) : [...current, channel];
+    await saveReminderChannels(next);
+  }
+
+  function updateManualBookingField<Key extends keyof ManualBookingFormState>(field: Key, value: ManualBookingFormState[Key]) {
+    setManualBookingForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleManualBookingClientSelect(clientId: string) {
+    const selectedClient = clients.find((client) => client.id === clientId);
+    setManualBookingForm((current) => ({
+      ...current,
+      client_id: clientId,
+      client_name: selectedClient?.name || current.client_name,
+      client_phone: selectedClient?.phone || selectedClient?.whatsapp || current.client_phone,
+    }));
+  }
+
+  async function sendEmailReminder(bookingId: string, eventId?: string) {
+    setSendingEmailBookingId(bookingId);
+    const response = await fetch("/api/dashboard/email-notifications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: bookingId, type: "reminder" }),
+      body: JSON.stringify({ booking_id: bookingId, event_id: eventId, type: "reminder" }),
     });
-    const payload = await res.json().catch(() => ({}));
-    setSendingReminder(null);
-    if (!res.ok) { toast({ variant: "destructive", title: "Error al enviar", description: payload.error }); return; }
-    if (payload.notification) setEmailNotifications((prev) => [payload.notification, ...prev]);
-    toast({ title: payload.recipientEmail ? `Recordatorio enviado a ${payload.recipientEmail}` : "Sin email registrado para este cliente" });
+    const payload = await response.json().catch(() => ({}));
+    setSendingEmailBookingId(null);
+
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se pudo enviar el correo", description: payload.error });
+      return;
+    }
+
+    if (payload.notification) {
+      setEmailNotifications((prev) => [payload.notification, ...prev]);
+    }
+    if (payload.event_id) {
+      setPendingEmailReminders((prev) => prev.filter((reminder) => reminder.event_id !== payload.event_id));
+    }
+    toast({ title: "Correo enviado", description: payload.recipientEmail || "Recordatorio enviado al cliente." });
+  }
+
+  async function updateAccountPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") || "");
+    const confirmPassword = String(formData.get("confirm_password") || "");
+
+    if (password.length < 6) {
+      toast({ variant: "destructive", title: "Contraseña muy corta", description: "Usa al menos 6 caracteres." });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({ variant: "destructive", title: "Las contraseñas no coinciden" });
+      return;
+    }
+
+    setUpdatingPassword(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    setUpdatingPassword(false);
+
+    if (error) {
+      toast({ variant: "destructive", title: "No se pudo cambiar la contraseña", description: error.message });
+      return;
+    }
+
+    event.currentTarget.reset();
+    toast({ title: "Contraseña actualizada" });
+  }
+
+  async function openWhatsAppReminder(eventOrBookingId: string, mode: "event" | "booking" = "event") {
+    setOpeningWhatsAppId(eventOrBookingId);
+    const response = await fetch("/api/dashboard/whatsapp-reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(mode === "event" ? { event_id: eventOrBookingId } : { booking_id: eventOrBookingId }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setOpeningWhatsAppId(null);
+
+    if (!response.ok || !payload.url) {
+      toast({ variant: "destructive", title: "No se pudo abrir WhatsApp", description: payload.error });
+      return;
+    }
+
+    window.open(payload.url, "_blank", "noopener,noreferrer");
+    setPendingWhatsappReminders((prev) =>
+      prev.filter((reminder) => reminder.event_id !== payload.event_id && reminder.booking_id !== payload.booking_id)
+    );
+    setBookings((prev) =>
+      prev.map((booking) => (booking.id === payload.booking_id ? { ...booking, whatsapp_reminder_sent: true } : booking))
+    );
+    toast({ title: "WhatsApp Web abierto", description: "Solo revisa el mensaje y pulsa Enter." });
+  }
+
+  async function createManualBooking(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const { barber_id: barberId, service_id: serviceId, date, start_time: startTime, client_id: clientId } = manualBookingForm;
+    const clientName = manualBookingForm.client_name.trim();
+    const clientPhone = manualBookingForm.client_phone.trim();
+    const notes = manualBookingForm.notes.trim();
+
+    const selectedService = services.find((service) => service.id === serviceId);
+    if (!selectedService) {
+      toast({ variant: "destructive", title: "Servicio inválido" });
+      return;
+    }
+
+    if (!barberId || !date || !startTime || !clientName) {
+      toast({ variant: "destructive", title: "Faltan datos", description: "Completa cliente, profesional, servicio, fecha y hora." });
+      return;
+    }
+
+    setCreatingManualBooking(true);
+    const response = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        manual: true,
+        shop_id: shopState.id,
+        barber_id: barberId,
+        service_id: serviceId,
+        date,
+        start_time: startTime,
+        end_time: addMinutesToTime(startTime, selectedService.duration_min),
+        client_id: clientId || undefined,
+        client_name: clientName,
+        client_phone: clientPhone || null,
+        notes: notes || null,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setCreatingManualBooking(false);
+
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se pudo crear la reserva", description: payload.error });
+      return;
+    }
+
+    setBookings((prev) =>
+      [...prev, {
+        ...payload,
+        clients: clientId ? { name: clientName, phone: clientPhone || null, whatsapp: clientPhone || null } : null,
+        barbers: activeBarbers.find((barber) => barber.id === barberId)
+          ? { display_name: activeBarbers.find((barber) => barber.id === barberId)!.display_name }
+          : null,
+        services: {
+          name: selectedService.name,
+          duration_min: selectedService.duration_min,
+          price: selectedService.price,
+        },
+      }].sort((a, b) => `${a.date || ""}${a.start_time}`.localeCompare(`${b.date || ""}${b.start_time}`))
+    );
+
+    setManualBookingForm({
+      client_id: "",
+      client_name: "",
+      client_phone: "",
+      barber_id: "",
+      service_id: "",
+      date: todayDateInput,
+      start_time: "",
+      notes: "",
+    });
+    setShowManualBookingForm(false);
+    toast({ title: "Reserva manual creada" });
   }
 
   async function openBillingCheckout() {
@@ -491,16 +761,16 @@ export default function DashboardClient({
       {currentTab === "summary" && (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard label="Ingresos cobrados" value={formatCurrency(analytics.realizedRevenue)} sub={`Estimado: ${formatCurrency(analytics.estimatedRevenue)}`} icon={CreditCard} color="teal" />
+            <KpiCard label="Ingresos cobrados" value={formatCurrency(analytics.realizedRevenue, shopState.currency)} sub={`Estimado: ${formatCurrency(analytics.estimatedRevenue, shopState.currency)}`} icon={CreditCard} color="teal" />
             <KpiCard label="Citas hoy" value={todayBookings.length} sub={`Confirmadas: ${todayBookings.filter((b) => b.status === "confirmed").length}`} icon={CalendarDays} color="gold" />
-            <KpiCard label="Esperado esta semana" value={formatCurrency(stats.expectedWeek)} sub={`Hoy: ${formatCurrency(stats.expectedToday)}`} icon={TrendingUp} color="teal" />
-            <KpiCard label="Ticket medio" value={formatCurrency(analytics.avgTicket)} sub={`${analytics.avgServiceTime} min por servicio`} icon={Star} color="gold" />
+            <KpiCard label="Esperado esta semana" value={formatCurrency(stats.expectedWeek, shopState.currency)} sub={`Hoy: ${formatCurrency(stats.expectedToday, shopState.currency)}`} icon={TrendingUp} color="teal" />
+            <KpiCard label="Ticket medio" value={formatCurrency(analytics.avgTicket, shopState.currency)} sub={`${analytics.avgServiceTime} min por servicio`} icon={Star} color="gold" />
           </div>
 
           <div className="flex flex-wrap gap-2">
             {[
               { label: "Total", value: analytics.totalsByStatus.total, color: "bg-zinc-100 text-zinc-700" },
-              { label: "Confirmadas", value: analytics.totalsByStatus.confirmed, color: "bg-emerald-100 text-emerald-700" },
+              { label: "Confirmadas", value: analytics.totalsByStatus.confirmed, color: "bg-amber-100 text-amber-700" },
               { label: "Pendientes", value: analytics.totalsByStatus.pending, color: "bg-amber-100 text-amber-700" },
               { label: "Completadas", value: analytics.totalsByStatus.completed, color: "bg-primary/10 text-primary" },
               { label: "Canceladas", value: analytics.totalsByStatus.cancelled, color: "bg-red-100 text-red-700" },
@@ -541,8 +811,8 @@ export default function DashboardClient({
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BarChart title="Servicios más solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavía." />
-            <BarChart title="Estilistas con más reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue) }))} emptyText="Sin datos todavía." />
+            <BarChart title="Servicios más solicitados" icon={Scissors} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavía." />
+            <BarChart title="Profesionales con más reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavía." />
             <BarChart title="Franjas con más demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
             <BarChart title="Días con más demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
           </div>
@@ -593,41 +863,200 @@ export default function DashboardClient({
 
       {/* ── BOOKINGS ── */}
       {currentTab === "bookings" && (
-        <Card className="shadow-none">
-          <CardHeader><CardTitle>Reservas próximas</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {bookings.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas próximas.</p>
-            ) : (
-              bookings.map((booking) => (
-                <div key={booking.id} className="rounded-xl border bg-card p-4 space-y-3">
-                  <div className="flex flex-wrap items-start gap-2 justify-between">
-                    <div>
-                      <p className="font-semibold">{booking.clients?.name || "Cliente"}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{booking.date} · {formatTime(booking.start_time.slice(0, 5))}–{formatTime(booking.end_time.slice(0, 5))}</p>
-                      <p className="text-sm text-muted-foreground">{booking.services?.name} · {booking.barbers?.display_name}</p>
+        <div className="space-y-6">
+          <Card className="shadow-none">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Reservas próximas</CardTitle>
+              <Button
+                type="button"
+                variant={showManualBookingForm ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowManualBookingForm((current) => !current)}
+              >
+                {showManualBookingForm ? "Ocultar formulario" : "Crear reserva manual"}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {showManualBookingForm && (
+                <form onSubmit={createManualBooking} className="space-y-4 rounded-xl border bg-muted/20 p-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-client-id">Cliente existente</Label>
+                      <select
+                        id="manual-client-id"
+                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        value={manualBookingForm.client_id}
+                        onChange={(event) => handleManualBookingClientSelect(event.target.value)}
+                      >
+                        <option value="">Selecciona uno si ya existe</option>
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.name} · {client.phone || client.whatsapp || "Sin teléfono"}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status]}`}>{STATUS_LABELS[booking.status]}</span>
-                      {booking.payment_amount > 0 && <span className="text-sm font-bold text-primary">{formatCurrency(booking.payment_amount, booking.payment_currency)}</span>}
-                      <span className="text-xs text-muted-foreground">{PAYMENT_STATUS_LABELS[booking.payment_status]}</span>
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-client-phone">Teléfono del cliente</Label>
+                      <Input
+                        id="manual-client-phone"
+                        value={manualBookingForm.client_phone}
+                        onChange={(event) => updateManualBookingField("client_phone", event.target.value)}
+                        placeholder="+1 809 000 0000"
+                      />
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 border-t pt-3">
-                    {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
-                      <Button key={status} size="sm" variant={booking.status === status ? "default" : "outline"} disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)} className="text-xs h-7">
-                        {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
-                      </Button>
-                    ))}
-                    <Button size="sm" variant="outline" className="ml-auto h-7 text-xs gap-1" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
-                      {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Mail className="h-3 w-3" /> Recordatorio</>}
-                    </Button>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-client-name">Nombre del cliente</Label>
+                      <Input
+                        id="manual-client-name"
+                        value={manualBookingForm.client_name}
+                        onChange={(event) => updateManualBookingField("client_name", event.target.value)}
+                        placeholder="Ej: Carlos Peña"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-barber">Profesional</Label>
+                      <select
+                        id="manual-barber"
+                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        value={manualBookingForm.barber_id}
+                        onChange={(event) => updateManualBookingField("barber_id", event.target.value)}
+                        required
+                      >
+                        <option value="">Selecciona un profesional</option>
+                        {activeBarbers.map((barber) => (
+                          <option key={barber.id} value={barber.id}>{barber.display_name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="manual-service">Servicio</Label>
+                      <select
+                        id="manual-service"
+                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        value={manualBookingForm.service_id}
+                        onChange={(event) => updateManualBookingField("service_id", event.target.value)}
+                        required
+                      >
+                        <option value="">Selecciona un servicio</option>
+                        {activeServices.map((service) => (
+                          <option key={service.id} value={service.id}>
+                            {service.name} · {service.duration_min} min
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="manual-date">Fecha</Label>
+                        <Input
+                          id="manual-date"
+                          type="date"
+                          min={todayDateInput}
+                          value={manualBookingForm.date}
+                          onChange={(event) => updateManualBookingField("date", event.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="manual-start-time">Hora de inicio</Label>
+                        <Input
+                          id="manual-start-time"
+                          type="time"
+                          value={manualBookingForm.start_time}
+                          onChange={(event) => updateManualBookingField("start_time", event.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="manual-notes">Notas</Label>
+                    <textarea
+                      id="manual-notes"
+                      value={manualBookingForm.notes}
+                      onChange={(event) => updateManualBookingField("notes", event.target.value)}
+                      placeholder="Observaciones internas de la reserva..."
+                      className="min-h-[90px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <Button type="submit" disabled={creatingManualBooking || activeBarbers.length === 0 || activeServices.length === 0}>
+                    {creatingManualBooking ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</> : "Guardar reserva manual"}
+                  </Button>
+                </form>
+              )}
+
+              {bookings.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay reservas próximas.</p>
+              ) : (
+                bookings.map((booking) => (
+                  <div key={booking.id} className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex flex-wrap items-start gap-2 justify-between">
+                      <div>
+                        <p className="font-semibold">{booking.clients?.name || booking.client_name || "Cliente"}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">{booking.date} · {formatTime(booking.start_time.slice(0, 5))}–{formatTime(booking.end_time.slice(0, 5))}</p>
+                        <p className="text-sm text-muted-foreground">{booking.services?.name} · {booking.barbers?.display_name}</p>
+                        {booking.client_phone && <p className="text-xs text-muted-foreground mt-1">{booking.client_phone}</p>}
+                        {booking.notes && <p className="text-xs text-muted-foreground mt-1">{booking.notes}</p>}
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[booking.status]}`}>{STATUS_LABELS[booking.status]}</span>
+                        {booking.payment_amount > 0 && <span className="text-sm font-bold text-primary">{formatCurrency(booking.payment_amount, booking.payment_currency)}</span>}
+                        <span className="text-xs text-muted-foreground">{PAYMENT_STATUS_LABELS[booking.payment_status]}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                      {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
+                        <Button key={status} size="sm" variant={booking.status === status ? "default" : "outline"} disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)} className="text-xs h-7">
+                          {updatingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : STATUS_LABELS[status]}
+                        </Button>
+                      ))}
+                      {isReminderEligible(booking) && isEmailEnabled && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={sendingEmailBookingId === booking.id}
+                          onClick={() => sendEmailReminder(booking.id)}
+                        >
+                          {sendingEmailBookingId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : reminderEmailsSentByBooking.has(booking.id) ? "Reenviar correo" : "Enviar correo"}
+                        </Button>
+                      )}
+                      {isReminderEligible(booking) && isWhatsAppEnabled && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={openingWhatsAppId === booking.id}
+                          onClick={() => openWhatsAppReminder(booking.id, "booking")}
+                        >
+                          {openingWhatsAppId === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : booking.whatsapp_reminder_sent ? "Reabrir WhatsApp" : "Enviar WhatsApp"}
+                        </Button>
+                      )}
+                      <div className="ml-auto flex flex-wrap items-center gap-2">
+                        {reminderEmailsSentByBooking.has(booking.id) && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            Correo enviado
+                          </span>
+                        )}
+                        {booking.whatsapp_reminder_sent && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            WhatsApp enviado
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* ── SERVICES ── */}
@@ -671,21 +1100,21 @@ export default function DashboardClient({
       {currentTab === "barbers" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <Card className="shadow-none">
-            <CardHeader><CardTitle>Estilistas ({barbers.length})</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Profesionales ({barbers.length})</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {barbers.map((barber) => {
                 const barberStats = analytics.topBarbers.find((b) => b.name === barber.display_name);
                 const bestStat = analytics.bestBarbers.find((b) => b.name === barber.display_name);
-                const barberRatings = ratingsByBarber[barber.id] || [];
+                const barberRatings = ratingsByBeauty[barber.id] || [];
                 const avgRating = barberRatings.length > 0 ? barberRatings.reduce((s, r) => s + r.rating, 0) / barberRatings.length : null;
-                const isUploading = uploadingBarberPhoto === barber.id;
+                const isUploading = uploadingBeautyPhoto === barber.id;
                 return (
                   <div key={barber.id} className={`rounded-xl border p-4 space-y-3 transition-opacity ${!barber.is_active ? "opacity-60" : ""}`}>
                     <div className="flex items-start gap-4">
                       {/* Avatar con upload */}
                       <label className="relative cursor-pointer shrink-0 group">
                         <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
-                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBarberPhoto(barber.id, f); }} />
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBeautyPhoto(barber.id, f); }} />
                         <div className="relative h-14 w-14 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
                           {barber.avatar_url ? (
                             <img src={barber.avatar_url} alt={barber.display_name} className="h-full w-full object-cover" />
@@ -719,8 +1148,8 @@ export default function DashboardClient({
                         <div className="flex flex-wrap gap-3 mt-1.5">
                           <span className="text-xs text-muted-foreground">{barber.barber_services?.length || 0} servicios</span>
                           {barberStats && <span className="text-xs text-muted-foreground">{barberStats.count} reservas</span>}
-                          {bestStat && <span className="text-xs text-emerald-600">{Math.round(bestStat.completionRate * 100)}% completadas</span>}
-                          {barberStats && <span className="text-xs font-semibold text-primary">{formatCurrency(barberStats.revenue)}</span>}
+                          {bestStat && <span className="text-xs text-amber-600">{Math.round(bestStat.completionRate * 100)}% completadas</span>}
+                          {barberStats && <span className="text-xs font-semibold text-primary">{formatCurrency(barberStats.revenue, shopState.currency)}</span>}
                         </div>
                       </div>
 
@@ -748,7 +1177,7 @@ export default function DashboardClient({
               })}
             </CardContent>
           </Card>
-          <CreateBarberForm services={services.filter((s) => s.is_active)} onSubmit={createBarber} />
+          <CreateBeautyForm services={services.filter((s) => s.is_active)} onSubmit={createBeauty} />
         </div>
       )}
 
@@ -809,32 +1238,66 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {/* ── EMAIL ── */}
-      {currentTab === "email" && (
+      {/* ── NOTIFICATIONS ── */}
+      {currentTab === "notifications" && (
         <div className="space-y-6">
           <Card className="shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-primary" /> Recordatorios de email
+                <Mail className="h-4 w-4 text-primary" /> Canales de recordatorio
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">Envía recordatorios de reserva por email a tus clientes. Haz clic en el botón <span className="font-medium">Recordatorio</span> en cualquier reserva.</p>
-              {emailNotifications.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No hay notificaciones de email enviadas aún.</p>
+            <CardContent className="space-y-2 pt-0">
+              <p className="text-xs text-muted-foreground">
+                Correo sale automático una vez al día en Vercel Hobby. WhatsApp queda manual desde el dashboard.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(["email", "whatsapp"] as ReminderChannel[]).map((channel) => {
+                  const isActive = reminderChannels.includes(channel);
+                  return (
+                    <Button
+                      key={channel}
+                      type="button"
+                      variant={isActive ? "default" : "outline"}
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => toggleReminderChannel(channel)}
+                    >
+                      {channel === "email" ? "Correo" : "WhatsApp"}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Activo ahora: <span className="font-medium">{getReminderChannelsLabel(reminderChannels)}</span>
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle className="text-base">WhatsApp pendientes</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {pendingWhatsappReminders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay recordatorios pendientes para WhatsApp.</p>
               ) : (
-                emailNotifications.map((notif) => (
-                  <div key={notif.id} className="flex items-center gap-3 rounded-xl border p-3">
-                    <div className={`h-2 w-2 shrink-0 rounded-full ${notif.status === "sent" ? "bg-emerald-500" : notif.status === "failed" ? "bg-red-500" : "bg-amber-400"}`} />
+                pendingWhatsappReminders.map((reminder) => (
+                  <div key={reminder.event_id} className="flex items-center gap-3 rounded-xl border p-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium capitalize">{notif.type === "reminder" ? "Recordatorio" : notif.type}</p>
-                      {notif.recipient_email && <p className="text-xs text-muted-foreground truncate">{notif.recipient_name ? `${notif.recipient_name} — ` : ""}{notif.recipient_email}</p>}
-                      {notif.error_message && <p className="text-xs text-destructive">{notif.error_message}</p>}
+                      <p className="font-medium text-sm">{reminder.client_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {reminder.date} · {formatTime(reminder.start_time.slice(0, 5))} · {reminder.service_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{reminder.client_whatsapp || reminder.client_phone || "Sin teléfono"}</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${notif.status === "sent" ? "bg-emerald-100 text-emerald-700" : notif.status === "failed" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{notif.status === "sent" ? "Enviado" : notif.status === "failed" ? "Error" : "Pendiente"}</span>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{new Date(notif.created_at).toLocaleString()}</p>
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1 shrink-0"
+                      disabled={openingWhatsAppId === reminder.event_id}
+                      onClick={() => openWhatsAppReminder(reminder.event_id)}
+                    >
+                      {openingWhatsAppId === reminder.event_id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Send className="h-3 w-3" /> Abrir WhatsApp Web</>}
+                    </Button>
                   </div>
                 ))
               )}
@@ -842,20 +1305,54 @@ export default function DashboardClient({
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle className="text-base">Enviar recordatorio a reservas próximas</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Correos pendientes</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {bookings.filter((b) => b.status === "confirmed").slice(0, 10).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay reservas confirmadas próximas.</p>
+              {!isEmailEnabled ? (
+                <p className="text-sm text-muted-foreground">Activa el canal Correo para enviar recordatorios por email.</p>
+              ) : pendingEmailReminders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay recordatorios pendientes para correo.</p>
               ) : (
-                bookings.filter((b) => b.status === "confirmed").slice(0, 10).map((booking) => (
-                  <div key={booking.id} className="flex items-center gap-3 rounded-xl border p-3">
+                pendingEmailReminders.map((reminder) => (
+                  <div key={reminder.event_id} className="flex items-center gap-3 rounded-xl border p-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{booking.clients?.name || "Cliente"}</p>
-                      <p className="text-xs text-muted-foreground">{booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name}</p>
+                      <p className="font-medium text-sm">{reminder.client_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {reminder.date} · {formatTime(reminder.start_time.slice(0, 5))} · {reminder.service_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Profesional: {reminder.barber_name}</p>
                     </div>
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 shrink-0" disabled={sendingReminder === booking.id} onClick={() => sendEmailReminder(booking.id)}>
-                      {sendingReminder === booking.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Send className="h-3 w-3" /> Enviar</>}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1 shrink-0"
+                      disabled={sendingEmailBookingId === reminder.booking_id}
+                      onClick={() => sendEmailReminder(reminder.booking_id, reminder.event_id)}
+                    >
+                      {sendingEmailBookingId === reminder.booking_id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Mail className="h-3 w-3" /> Enviar correo</>}
                     </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle className="text-base">Correos enviados hoy</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {todayEmailNotifications.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay correos enviados hoy.</p>
+              ) : (
+                todayEmailNotifications.map((notif) => (
+                  <div key={notif.id} className="flex items-center gap-3 rounded-xl border p-3">
+                    <div className={`h-2 w-2 shrink-0 rounded-full ${notif.status === "sent" ? "bg-amber-500" : notif.status === "failed" ? "bg-red-500" : "bg-amber-400"}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium capitalize">{notif.type === "reminder" ? "Recordatorio" : notif.type}</p>
+                      {notif.recipient_email && <p className="text-xs text-muted-foreground truncate">{notif.recipient_name ? `${notif.recipient_name} — ` : ""}{notif.recipient_email}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${notif.status === "sent" ? "bg-amber-100 text-amber-700" : notif.status === "failed" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{notif.status === "sent" ? "Enviado" : notif.status === "failed" ? "Error" : "Pendiente"}</span>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{new Date(notif.created_at).toLocaleString()}</p>
+                    </div>
                   </div>
                 ))
               )}
@@ -890,7 +1387,7 @@ export default function DashboardClient({
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle>Información de la salón de belleza</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Información del salón de belleza</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={saveShopInfo} className="space-y-4">
                 <div className="space-y-1">
@@ -899,9 +1396,9 @@ export default function DashboardClient({
                 </div>
                 <Field name="address" label="Dirección" defaultValue={shopState.address || ""} placeholder="Calle, número, ciudad" />
                 <div className="space-y-1">
-                  <Label htmlFor="maps_url" className="text-sm">Embed de Google Maps</Label>
-                  <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="https://www.google.com/maps/embed?pb=..." />
-                  <p className="text-xs text-muted-foreground">Google Maps → tu local → Compartir → Insertar mapa → copia el <code>src</code> del iframe</p>
+                  <Label htmlFor="maps_url" className="text-sm">Enlace o iframe de Google Maps</Label>
+                  <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="Pega la URL o el src del iframe de Google Maps" />
+                  <p className="text-xs text-muted-foreground">Puedes pegar la URL normal, el enlace compartido o el <code>src</code> del iframe. iBeauty lo normaliza al guardar.</p>
                 </div>
                 <Field name="phone" label="Teléfono" defaultValue={shopState.phone || ""} placeholder="+1 809 000 0000" />
                 <div className="space-y-1">
@@ -918,9 +1415,22 @@ export default function DashboardClient({
           <Card className="shadow-none">
             <CardHeader><CardTitle>Detalles de la cuenta</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <InfoRow label="URL pública" value={`ibeauty.app/${shopState.slug}`} />
+              <InfoRow label="URL pública" value={buildAppUrl(`/${shopState.slug}`)} />
               <InfoRow label="Ciudad" value={shopState.city ? `${shopState.city}, ${shopState.country_name}` : "No especificada"} />
               <InfoRow label="Pagos online" value={shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"} />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle>Contraseña</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={updateAccountPassword} className="space-y-4">
+                <Field name="password" label="Contraseña nueva" type="password" autoComplete="new-password" required />
+                <Field name="confirm_password" label="Confirmar contraseña" type="password" autoComplete="new-password" required />
+                <Button type="submit" disabled={updatingPassword}>
+                  {updatingPassword ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : "Cambiar contraseña"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </div>
@@ -1002,8 +1512,8 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (e: FormEvent<HTMLFormEleme
       <CardHeader><CardTitle className="text-base">Nuevo servicio</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
-          <Field name="name" label="Nombre" required placeholder="Corte de cabello" />
-          <Field name="category" label="Categoría" placeholder="Corte, Barba, Combo..." />
+          <Field name="name" label="Nombre" required placeholder="Peinado y styling" />
+          <Field name="category" label="Categoría" placeholder="Peinado, Uñas, Tratamiento..." />
           <div className="grid grid-cols-2 gap-3">
             <Field name="duration_min" label="Duración (min)" type="number" defaultValue="30" required />
             <Field name="price" label="Precio" type="number" defaultValue="500" required />
@@ -1019,10 +1529,10 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (e: FormEvent<HTMLFormEleme
   );
 }
 
-function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmit: (e: FormEvent<HTMLFormElement>) => void }) {
+function CreateBeautyForm({ services, onSubmit }: { services: Service[]; onSubmit: (e: FormEvent<HTMLFormElement>) => void }) {
   return (
     <Card className="shadow-none">
-      <CardHeader><CardTitle className="text-base">Nuevo estilista</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">Nuevo profesional</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
           <Field name="display_name" label="Nombre público" required placeholder="Ej: Miguel" />
@@ -1044,7 +1554,7 @@ function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmi
               </div>
             </div>
           )}
-          <Button type="submit" className="w-full">Crear estilista</Button>
+          <Button type="submit" className="w-full">Crear profesional</Button>
         </form>
       </CardContent>
     </Card>
