@@ -347,6 +347,17 @@ export interface PendingWhatsappReminder {
   start_time: string;
 }
 
+export interface PendingEmailReminder {
+  event_id: string;
+  booking_id: string;
+  scheduled_for: string | null;
+  client_name: string;
+  service_name: string;
+  barber_name: string;
+  date: string;
+  start_time: string;
+}
+
 
 export type ServiceInsert = Omit<Service, "id" | "created_at">;
 export type BookingInsert = Omit<Booking, "id" | "created_at">;

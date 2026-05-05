@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { createClient } from "@/lib/supabase/client";
 import { buildAppUrl, formatCurrency, formatTime, getCurrentDateInTimeZone, getCurrentTimeInTimeZone } from "@/lib/utils";
 import { getTimeZoneForCountry } from "@/lib/locations";
 import type {
@@ -37,6 +38,7 @@ import type {
   BookingStatus,
   EmailNotification,
   NotificationEvent,
+  PendingEmailReminder,
   PendingWhatsappReminder,
   PaymentStatus,
   Service,
@@ -116,6 +118,7 @@ interface Props {
   notificationEvents: NotificationEvent[];
   ratings: BarberRating[];
   emailNotifications: EmailNotification[];
+  pendingEmailReminders: PendingEmailReminder[];
   pendingWhatsappReminders: PendingWhatsappReminder[];
   subscription: ShopSubscription | null;
   paymentMethods: ShopPaymentMethod[];
@@ -237,6 +240,7 @@ export default function DashboardClient({
   clients,
   ratings,
   emailNotifications: initialEmailNotifications,
+  pendingEmailReminders: initialPendingEmailReminders,
   pendingWhatsappReminders: initialPendingWhatsappReminders,
   subscription,
   paymentMethods,
@@ -261,9 +265,11 @@ export default function DashboardClient({
   const [bannerPreview, setBannerPreview] = useState<string | null>(shop.banner_url || null);
   const [uploadingBarberPhoto, setUploadingBarberPhoto] = useState<string | null>(null);
   const [emailNotifications, setEmailNotifications] = useState(initialEmailNotifications);
+  const [pendingEmailReminders, setPendingEmailReminders] = useState(initialPendingEmailReminders);
   const [pendingWhatsappReminders, setPendingWhatsappReminders] = useState(initialPendingWhatsappReminders);
   const [openingWhatsAppId, setOpeningWhatsAppId] = useState<string | null>(null);
   const [sendingEmailBookingId, setSendingEmailBookingId] = useState<string | null>(null);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
   const [creatingManualBooking, setCreatingManualBooking] = useState(false);
   const [showManualBookingForm, setShowManualBookingForm] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
@@ -322,6 +328,13 @@ export default function DashboardClient({
           .map((notification) => notification.booking_id as string)
       ),
     [emailNotifications]
+  );
+  const todayEmailNotifications = useMemo(
+    () =>
+      emailNotifications.filter(
+        (notification) => getCurrentDateInTimeZone(shopTimeZone, new Date(notification.created_at)) === todayDateInput
+      ),
+    [emailNotifications, shopTimeZone, todayDateInput]
   );
   const isEmailEnabled = reminderChannels.includes("email");
   const isWhatsAppEnabled = reminderChannels.includes("whatsapp");
@@ -555,12 +568,12 @@ export default function DashboardClient({
     }));
   }
 
-  async function sendEmailReminder(bookingId: string) {
+  async function sendEmailReminder(bookingId: string, eventId?: string) {
     setSendingEmailBookingId(bookingId);
     const response = await fetch("/api/dashboard/email-notifications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: bookingId, type: "reminder" }),
+      body: JSON.stringify({ booking_id: bookingId, event_id: eventId, type: "reminder" }),
     });
     const payload = await response.json().catch(() => ({}));
     setSendingEmailBookingId(null);
@@ -573,7 +586,40 @@ export default function DashboardClient({
     if (payload.notification) {
       setEmailNotifications((prev) => [payload.notification, ...prev]);
     }
+    if (payload.event_id) {
+      setPendingEmailReminders((prev) => prev.filter((reminder) => reminder.event_id !== payload.event_id));
+    }
     toast({ title: "Correo enviado", description: payload.recipientEmail || "Recordatorio enviado al cliente." });
+  }
+
+  async function updateAccountPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") || "");
+    const confirmPassword = String(formData.get("confirm_password") || "");
+
+    if (password.length < 6) {
+      toast({ variant: "destructive", title: "Contraseña muy corta", description: "Usa al menos 6 caracteres." });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({ variant: "destructive", title: "Las contraseñas no coinciden" });
+      return;
+    }
+
+    setUpdatingPassword(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    setUpdatingPassword(false);
+
+    if (error) {
+      toast({ variant: "destructive", title: "No se pudo cambiar la contraseña", description: error.message });
+      return;
+    }
+
+    event.currentTarget.reset();
+    toast({ title: "Contraseña actualizada" });
   }
 
   async function openWhatsAppReminder(eventOrBookingId: string, mode: "event" | "booking" = "event") {
@@ -1259,12 +1305,44 @@ export default function DashboardClient({
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader><CardTitle className="text-base">Historial de correos automáticos</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {emailNotifications.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No hay correos enviados aún.</p>
+            <CardHeader><CardTitle className="text-base">Correos pendientes</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {!isEmailEnabled ? (
+                <p className="text-sm text-muted-foreground">Activa el canal Correo para enviar recordatorios por email.</p>
+              ) : pendingEmailReminders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay recordatorios pendientes para correo.</p>
               ) : (
-                emailNotifications.map((notif) => (
+                pendingEmailReminders.map((reminder) => (
+                  <div key={reminder.event_id} className="flex items-center gap-3 rounded-xl border p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{reminder.client_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {reminder.date} · {formatTime(reminder.start_time.slice(0, 5))} · {reminder.service_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Barbero: {reminder.barber_name}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1 shrink-0"
+                      disabled={sendingEmailBookingId === reminder.booking_id}
+                      onClick={() => sendEmailReminder(reminder.booking_id, reminder.event_id)}
+                    >
+                      {sendingEmailBookingId === reminder.booking_id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Mail className="h-3 w-3" /> Enviar correo</>}
+                    </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle className="text-base">Correos enviados hoy</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {todayEmailNotifications.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay correos enviados hoy.</p>
+              ) : (
+                todayEmailNotifications.map((notif) => (
                   <div key={notif.id} className="flex items-center gap-3 rounded-xl border p-3">
                     <div className={`h-2 w-2 shrink-0 rounded-full ${notif.status === "sent" ? "bg-emerald-500" : notif.status === "failed" ? "bg-red-500" : "bg-amber-400"}`} />
                     <div className="flex-1 min-w-0">
@@ -1340,6 +1418,19 @@ export default function DashboardClient({
               <InfoRow label="URL pública" value={buildAppUrl(`/${shopState.slug}`)} />
               <InfoRow label="Ciudad" value={shopState.city ? `${shopState.city}, ${shopState.country_name}` : "No especificada"} />
               <InfoRow label="Pagos online" value={shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"} />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader><CardTitle>Contraseña</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={updateAccountPassword} className="space-y-4">
+                <Field name="password" label="Contraseña nueva" type="password" autoComplete="new-password" required />
+                <Field name="confirm_password" label="Confirmar contraseña" type="password" autoComplete="new-password" required />
+                <Button type="submit" disabled={updatingPassword}>
+                  {updatingPassword ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : "Cambiar contraseña"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </div>

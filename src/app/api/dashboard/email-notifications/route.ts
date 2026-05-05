@@ -24,6 +24,7 @@ export async function GET() {
 
 const sendSchema = z.object({
   booking_id: z.string().uuid(),
+  event_id: z.string().uuid().optional(),
   type: z.literal("reminder").default("reminder"),
 });
 
@@ -36,6 +37,20 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
   const admin = await createAdminClient();
+
+  if (parsed.data.event_id) {
+    const { data: event } = await admin
+      .from("notification_events")
+      .select("id")
+      .eq("id", parsed.data.event_id)
+      .eq("booking_id", parsed.data.booking_id)
+      .eq("shop_id", context.shop.id)
+      .eq("channel", "email")
+      .eq("status", "pending")
+      .single();
+
+    if (!event) return NextResponse.json({ error: "Aviso pendiente no encontrado" }, { status: 404 });
+  }
 
   const { data: booking } = await admin
     .from("bookings")
@@ -129,5 +144,13 @@ export async function POST(request: Request) {
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
 
-  return NextResponse.json({ success: true, notification, recipientEmail });
+  if (parsed.data.event_id) {
+    await admin
+      .from("notification_events")
+      .update({ status: "sent", sent_at: sentAt })
+      .eq("id", parsed.data.event_id)
+      .eq("shop_id", context.shop.id);
+  }
+
+  return NextResponse.json({ success: true, notification, recipientEmail, event_id: parsed.data.event_id || null });
 }

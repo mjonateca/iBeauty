@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import type { Barber, BarberRating, Client, ClientPaymentMethod, EmailNotification, PendingWhatsappReminder, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
+import type { Barber, BarberRating, Client, ClientPaymentMethod, EmailNotification, PendingEmailReminder, PendingWhatsappReminder, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
 import { ensureAccountRecords } from "@/lib/account-repair";
 import { IS_DEMO, demoBookings, demoShop } from "@/lib/demo-data";
 import { getTimeZoneForCountry } from "@/lib/locations";
@@ -34,6 +34,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         notificationEvents={[]}
         ratings={[]}
         emailNotifications={[]}
+        pendingEmailReminders={[]}
         pendingWhatsappReminders={[]}
         subscription={null}
         paymentMethods={[]}
@@ -229,7 +230,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const analytics = buildShopAnalytics(bookings as never);
   const nowIso = new Date().toISOString();
 
-  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }, { data: ratingsRaw }, { data: emailNotificationsRaw }, { data: pendingWhatsappEventsRaw }] = await Promise.all([
+  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }, { data: ratingsRaw }, { data: emailNotificationsRaw }, { data: pendingEmailEventsRaw }, { data: pendingWhatsappEventsRaw }] = await Promise.all([
     admin.from("services").select("*").eq("shop_id", shop.id).order("sort_order").order("name"),
     admin.from("barbers").select("*, barber_services(service_id)").eq("shop_id", shop.id).order("display_name"),
     clientIds.length
@@ -248,6 +249,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       .from("notification_events")
       .select("id, booking_id, scheduled_for, status")
       .eq("shop_id", shop.id)
+      .eq("channel", "email")
+      .eq("type", "booking_reminder")
+      .eq("status", "pending")
+      .lte("scheduled_for", nowIso)
+      .order("scheduled_for", { ascending: true })
+      .limit(20),
+    admin
+      .from("notification_events")
+      .select("id, booking_id, scheduled_for, status")
+      .eq("shop_id", shop.id)
       .eq("channel", "whatsapp")
       .eq("type", "booking_reminder")
       .eq("status", "pending")
@@ -257,6 +268,28 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   ]);
 
   const bookingMap = new Map(bookings.map((booking) => [booking.id, booking]));
+  const pendingEmailReminders: PendingEmailReminder[] = ((pendingEmailEventsRaw || []) as Array<{
+    id: string;
+    booking_id: string | null;
+    scheduled_for: string | null;
+  }>)
+    .map((event) => {
+      if (!event.booking_id) return null;
+      const booking = bookingMap.get(event.booking_id);
+      if (!booking) return null;
+
+      return {
+        event_id: event.id,
+        booking_id: booking.id,
+        scheduled_for: event.scheduled_for,
+        client_name: booking.clients?.name || booking.client_name || "Cliente",
+        service_name: booking.services?.name || "Servicio",
+        barber_name: booking.barbers?.display_name || "Tu barbero",
+        date: booking.date || "",
+        start_time: booking.start_time,
+      };
+    })
+    .filter(Boolean) as PendingEmailReminder[];
   const pendingWhatsappReminders: PendingWhatsappReminder[] = ((pendingWhatsappEventsRaw || []) as Array<{
     id: string;
     booking_id: string | null;
@@ -293,6 +326,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       notificationEvents={(notificationEvents || []) as never}
       ratings={(ratingsRaw || []) as BarberRating[]}
       emailNotifications={(emailNotificationsRaw || []) as EmailNotification[]}
+      pendingEmailReminders={pendingEmailReminders}
       pendingWhatsappReminders={pendingWhatsappReminders}
       subscription={subscriptionRaw as ShopSubscription | null}
       paymentMethods={(paymentMethodsRaw || []) as ShopPaymentMethod[]}
