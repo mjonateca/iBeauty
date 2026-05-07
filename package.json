@@ -2,6 +2,7 @@
   "name": "ibeauty",
   "version": "0.1.0",
   "private": true,
+  "description": "Beauty salon booking app.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
