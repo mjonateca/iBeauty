@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     });
 
     const result = await resend.emails.send({
-      from: `${shopName} <${process.env.RESEND_FROM_EMAIL || "no-reply@ibeauty.app"}>`,
+      from: `${shopName} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,
       to: recipientEmail,
       subject: REMINDER_SUBJECT,
       html,
